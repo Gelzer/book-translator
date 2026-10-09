@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Book Translator — перевод книг с сохранением вёрстки</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --accent: #7a1f4a;
+            --accent-light: #fdf7fa;
+            --accent-hover: #5e1738;
+            --green: #15803d;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --text: #1a1a1a;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --bg: #fafaf7;
+            --serif: "PT Serif", "Literata", Georgia, "Times New Roman", serif;
+            --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+        .header {
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            background: white;
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .hero {
+            text-align: center;
+            padding: 72px 0 40px;
+        }
+        .hero h1 {
+            font-family: var(--serif);
+            font-size: 52px;
+            line-height: 1.15;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 20px;
+        }
+        .hero h1 .accent { color: var(--accent); }
+        .hero p {
+            font-size: 18px;
+            color: var(--text-muted);
+            max-width: 620px;
+            margin: 0 auto 12px;
+        }
+        .hero-badge {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+            margin-bottom: 24px;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+        .drop-zone-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+        .drop-zone-text {
+            font-size: 17px;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .drop-zone-sub {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+            font-family: var(--sans);
+        }
+        .btn:hover:not(:disabled) { background: var(--accent-hover); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-green { background: var(--green); }
+        .btn-green:hover:not(:disabled) { background: #12642f; }
+        .btn-sm { padding: 9px 18px; font-size: 14px; }
+        .btn-outline {
+            background: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+        }
+        .btn-outline:hover:not(:disabled) {
+            background: var(--accent);
+            color: white;
+        }
+
+        .info-bar {
+            padding: 14px 18px;
+            background: var(--accent-light);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .info-bar strong { color: var(--accent); }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        /* === WARNING BOX === */
+        .warning-box {
+            background: var(--warning-bg);
+            border: 1px solid #fcd34d;
+            border-left: 4px solid var(--warning);
+            border-radius: 10px;
+            padding: 20px 22px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .warning-box .warn-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        .warning-box .warn-lead {
+            color: #78350f;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .warn-option {
+            padding: 8px 0;
+        }
+        .warn-option-title {
+            font-weight: 600;
+            color: #92400e;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+        .warn-option-desc {
+            font-size: 13px;
+            color: #78350f;
+            line-height: 1.5;
+        }
+        .or-divider {
+            text-align: center;
+            font-size: 11px;
+            color: #b45309;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(245, 158, 11, 0.4);
+        }
+
+        /* === PROGRESS === */
+        .progress-wrap {
+            padding: 24px;
+            background: var(--accent-light);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .progress-bar {
+            height: 10px;
+            background: rgba(122, 31, 74, 0.15);
+            border-radius: 100px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        .progress-num {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: right;
+        }
+        .progress-done {
+            text-align: center;
+            padding: 20px;
+        }
+        .progress-done-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .progress-done h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .progress-done p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        /* === NOTIFY === */
+        .notify-section {
+            margin-top: 8px;
+        }
+        .notify-block {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 18px;
+        }
+        .notify-block .block-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        .notify-block .block-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        .notify-row {
+            display: flex;
+            gap: 8px;
+        }
+        .notify-input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: var(--sans);
+            background: white;
+        }
+        .notify-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .link-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .link-code {
+            font-family: monospace;
+            background: #fafaf7;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 12.5px;
+            word-break: break-all;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .result-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .result-toolbar strong { font-size: 15px; }
+        .toolbar-btns { display: flex; gap: 8px; }
+
+        .preview-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .preview-col {
+            padding: 22px 24px;
+            background: #fafaf7;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .preview-col h3 {
+            font-size: 11px;
+            letter-spacing: 1.2px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .segment {
+            font-family: var(--serif);
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 18px;
+            color: var(--text);
+        }
+        .segment:last-child { margin-bottom: 0; }
+        .segment i, .segment em { font-style: italic; }
+        .segment b, .segment strong { font-weight: 700; }
+        .segment a { color: var(--accent); }
+
+        .pricing { margin: 56px 0; text-align: center; }
+        .pricing h2 {
+            font-family: var(--serif);
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        .pricing-sub {
+            color: var(--text-muted);
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            text-align: left;
+        }
+        .plan {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .plan:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+        }
+        .plan.featured {
+            border-color: var(--accent);
+            border-width: 2px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(122,31,74,0.08);
+        }
+        .plan-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 5px 12px;
+            border-radius: 100px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .plan-name {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .plan-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            min-height: 36px;
+            line-height: 1.45;
+        }
+        .plan-price {
+            font-family: var(--serif);
+            font-size: 40px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 4px;
+            letter-spacing: -1px;
+        }
+        .plan-price small {
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--text-muted);
+            font-family: var(--sans);
+            letter-spacing: 0;
+        }
+        .plan-price-note {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            min-height: 20px;
+        }
+        .plan-features {
+            list-style: none;
+            margin-bottom: 24px;
+            flex-grow: 1;
+        }
+        .plan-features li {
+            font-size: 14px;
+            padding: 7px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.4;
+        }
+        .plan-features li::before {
+            content: "✓";
+            color: var(--accent);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .plan-btn {
+            width: 100%;
+            text-align: center;
+            padding: 12px;
+            font-size: 15px;
+        }
+
+        .feedback { margin: 56px 0; }
+        .feedback h2 {
+            font-family: var(--serif);
+            font-size: 32px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        .feedback-sub {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 16px;
+            margin-bottom: 32px;
+        }
+        .feedback-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 640px;
+            margin: 0 auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+        }
+        .feedback-tabs {
+            display: flex;
+            gap: 4px;
+            background: #f3f4f6;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+        .feedback-tab {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-family: var(--sans);
+        }
+        .feedback-tab.active {
+            background: white;
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .stars {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        .star {
+            font-size: 32px;
+            cursor: pointer;
+            color: #e5e7eb;
+            user-select: none;
+            line-height: 1;
+        }
+        .star:hover, .star.active { color: #f59e0b; }
+        .feedback-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: var(--sans);
+            resize: vertical;
+            margin-bottom: 16px;
+        }
+        .feedback-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: var(--sans);
+            margin-bottom: 16px;
+        }
+        .feedback-submit {
+            width: 100%;
+            padding: 14px;
+            font-size: 15px;
+        }
+        .feedback-thanks {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .feedback-thanks-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .feedback-thanks h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .feedback-thanks p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .error {
+            color: #b91c1c;
+            padding: 14px 16px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        .success {
+            color: #166534;
+            padding: 10px 14px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+        .loader {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(122,31,74,0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+
+        .footer {
+            text-align: center;
+            padding: 40px 0 32px;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+
+        @media (max-width: 780px) {
+            .pricing-grid { grid-template-columns: 1fr; }
+            .action-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 34px; }
+            .preview-box { grid-template-columns: 1fr; }
+            .card { padding: 22px; }
+            .notify-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <div class="logo">📖 Book Translator</div>
+    </div>
+</header>
+
+<main class="container">
+
+    <section class="hero">
+        <h1>Переведите книгу<br>с <span class="accent">сохранением вёрстки</span></h1>
+        <p>AI-перевод уровня профессионального редактора. Начните бесплатно — первые 40 абзацев любой книги.</p>
+        <div class="hero-badge">Без регистрации · Начало книги бесплатно</div>
+    </section>
+
+    <!-- UPLOAD -->
+    <section class="card" id="step-upload">
+        <div class="drop-zone" id="drop-zone">
+            <div class="drop-zone-icon">↑</div>
+            <div class="drop-zone-text">Перетащите EPUB сюда</div>
+            <div class="drop-zone-sub">или выберите файл на компьютере</div>
+            <button class="btn" id="select-btn" type="button">Выбрать файл</button>
+            <input type="file" id="file-input" accept=".epub" hidden>
+        </div>
+    </section>
+
+    <!-- BOOK INFO -->
+    <section class="card hidden" id="step-book">
+        <div class="info-bar" id="book-info"></div>
+        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">
+            Попробуйте качество перевода на первых абзацах бесплатно или закажите полный перевод книги.
+        </p>
+        <div class="action-grid">
+            <button class="btn btn-outline" id="preview-btn" type="button">
+                Перевести 40 абзацев бесплатно
+            </button>
+            <button class="btn" id="full-btn" type="button">
+                Перевести всю книгу — 990 ₽
+            </button>
+        </div>
+    </section>
+
+    <!-- PREVIEW RESULT -->
+    <section class="card hidden" id="step-result">
+        <div class="result-toolbar">
+            <strong id="result-title">Перевод первых абзацев</strong>
+            <div class="toolbar-btns">
+                <button class="btn btn-green btn-sm" id="download-btn" disabled type="button">⬇ Скачать EPUB</button>
+                <button class="btn btn-sm" id="back-btn" type="button">← Назад</button>
+            </div>
+        </div>
+
+        <div class="preview-box">
+            <div class="preview-col">
+                <h3>Оригинал</h3>
+                <div id="original"></div>
+            </div>
+            <div class="preview-col">
+                <h3>Перевод</h3>
+                <div id="translation"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FULL PROGRESS -->
+    <section class="card hidden" id="step-progress">
+        <div id="progress-active">
+            <h2 style="font-family: var(--serif); font-size: 26px; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.3px;">
+                Перевод запущен
+            </h2>
+
+            <div class="warning-box">
+                <div class="warn-title">⚠️ Если закроете вкладку — перевод продолжится, но результат пропадёт из виду</div>
+                <p class="warn-lead">
+                    Чтобы получить готовый файл, сделайте <strong>что-то одно</strong>:
+                </p>
+
+                <div class="warn-option">
+                    <div class="warn-option-title">① Останьтесь на этой странице</div>
+                    <div class="warn-option-desc">Увидите прогресс в реальном времени и кнопку «Скачать»</div>
+                </div>
+
+                <div class="or-divider">ИЛИ</div>
+
+                <div class="warn-option">
+                    <div class="warn-option-title">② Впишите email ниже</div>
+                    <div class="warn-option-desc">Пришлём ссылку на готовый файл</div>
+                </div>
+
+                <div class="or-divider">ИЛИ</div>
+
+                <div class="warn-option">
+                    <div class="warn-option-title">③ Сохраните ссылку ниже</div>
+                    <div class="warn-option-desc">Вернётесь по ней, когда перевод будет готов</div>
+                </div>
+            </div>
+
+            <div class="progress-wrap">
+                <div class="progress-header">
+                    <span>Перевод книги…</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-num" id="progress-num">0 / 0</div>
+            </div>
+
+            <div class="notify-section">
+                <div class="notify-block">
+                    <div class="block-title">② Впишите email</div>
+                    <div class="block-desc">Пришлём ссылку, когда перевод будет готов</div>
+                    <div class="notify-row">
+                        <input type="email" class="notify-input" id="email-input" placeholder="your@email.com">
+                        <button class="btn" id="email-btn" type="button" style="white-space: nowrap;">Отправить</button>
+                    </div>
+                    <div id="email-status"></div>
+                </div>
+
+                <div class="or-divider" style="margin: 16px 0;">ИЛИ</div>
+
+                <div class="notify-block">
+                    <div class="block-title">③ Сохраните ссылку</div>
+                    <div class="block-desc">Вернётесь по ней, когда перевод будет готов</div>
+                    <div class="link-row">
+                        <span class="link-code" id="job-link">—</span>
+                        <button class="btn btn-sm btn-outline" id="copy-link-btn" type="button">Копировать</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-done hidden" id="progress-done">
+            <div class="progress-done-icon">✅</div>
+            <h3>Перевод готов!</h3>
+            <p>Книга переведена и сохранена. Можно скачать.</p>
+            <button class="btn btn-green" id="download-full-btn" type="button" style="padding: 14px 32px; font-size: 15px;">
+                ⬇ Скачать EPUB
+            </button>
+        </div>
+
+        <div style="margin-top: 20px; text-align: center;">
+            <button class="btn btn-sm btn-outline" id="progress-back-btn" type="button">← Вернуться к книге</button>
+        </div>
+    </section>
+
+    <!-- PRICING -->
+    <section class="pricing">
+        <h2>Простые цены</h2>
+        <p class="pricing-sub">Платите только за то, что переводите. Никаких подписок.</p>
+
+        <div class="pricing-grid">
+            <div class="plan">
+                <div class="plan-name">Превью</div>
+                <div class="plan-desc">Попробуйте качество перевода на первых абзацах</div>
+                <div class="plan-price">0 <small>₽</small></div>
+                <div class="plan-price-note">без регистрации</div>
+                <ul class="plan-features">
+                    <li>Первые 40 абзацев</li>
+                    <li>Сохранение вёрстки</li>
+                    <li>Скачивание EPUB</li>
+                </ul>
+                <button class="btn plan-btn" onclick="document.getElementById('step-upload').scrollIntoView({behavior:'smooth', block:'center'})" type="button">
+                    Попробовать
+                </button>
+            </div>
+
+            <div class="plan featured">
+                <div class="plan-badge">Популярный</div>
+                <div class="plan-name">Вся книга</div>
+                <div class="plan-desc">Полный перевод книги с сохранением структуры</div>
+                <div class="plan-price">990 <small>₽</small></div>
+                <div class="plan-price-note">за книгу до 150 000 слов</div>
+                <ul class="plan-features">
+                    <li>Вся книга целиком</li>
+                    <li>Все главы, сноски, картинки</li>
+                    <li>Скачивание EPUB</li>
+                    <li>Приоритетная очередь</li>
+                </ul>
+                <button class="btn plan-btn" onclick="document.getElementById('step-upload').scrollIntoView({behavior:'smooth', block:'center'})" type="button">
+                    Выбрать
+                </button>
+            </div>
+
+            <div class="plan">
+                <div class="plan-name">Серия книг</div>
+                <div class="plan-desc">Для авторов серий и сериалов — с общим глоссарием</div>
+                <div class="plan-price">3900 <small>₽</small></div>
+                <div class="plan-price-note">за 5 книг одного автора</div>
+                <ul class="plan-features">
+                    <li>5 книг целиком</li>
+                    <li>Общий глоссарий имён</li>
+                    <li>Единый стиль перевода</li>
+                    <li>Приоритетная поддержка</li>
+                </ul>
+                <button class="btn plan-btn" onclick="document.getElementById('step-upload').scrollIntoView({behavior:'smooth', block:'center'})" type="button">
+                    Выбрать
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEEDBACK -->
+    <section class="feedback hidden" id="feedback-section">
+        <h2>Помогите нам стать лучше</h2>
+        <p class="feedback-sub">Расскажите, что понравилось, что сломалось или чего не хватает</p>
+
+        <div class="feedback-card">
+            <div id="feedback-form-wrap">
+                <div class="feedback-tabs">
+                    <button class="feedback-tab active" data-type="review" type="button">Оставить отзыв</button>
+                    <button class="feedback-tab" data-type="suggestion" type="button">Предложить улучшение</button>
+                </div>
+
+                <div id="rating-wrap">
+                    <div class="stars" id="stars">
+                        <span class="star" data-value="1">★</span>
+                        <span class="star" data-value="2">★</span>
+                        <span class="star" data-value="3">★</span>
+                        <span class="star" data-value="4">★</span>
+                        <span class="star" data-value="5">★</span>
+                    </div>
+                </div>
+
+                <textarea class="feedback-textarea" id="feedback-text" placeholder="Расскажите подробнее..."></textarea>
+                <input type="email" class="feedback-input" id="feedback-email" placeholder="Email (необязательно, если хотите ответ)">
+                <button class="btn feedback-submit" id="feedback-submit" type="button">Отправить</button>
+            </div>
+
+            <div id="feedback-thanks" class="feedback-thanks hidden">
+                <div class="feedback-thanks-icon">🙏</div>
+                <h3>Спасибо!</h3>
+                <p>Мы прочитаем ваш отзыв и учтём в следующих версиях.</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        Book Translator · AI-перевод книг с сохранением вёрстки
+    </div>
+</footer>
+
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const selectBtn = document.getElementById('select-btn');
+    const stepUpload = document.getElementById('step-upload');
+    const stepBook = document.getElementById('step-book');
+    const stepResult = document.getElementById('step-result');
+    const stepProgress = document.getElementById('step-progress');
+    const bookInfo = document.getElementById('book-info');
+    const previewBtn = document.getElementById('preview-btn');
+    const fullBtn = document.getElementById('full-btn');
+    const resultTitle = document.getElementById('result-title');
+    const original = document.getElementById('original');
+    const translation = document.getElementById('translation');
+    const downloadBtn = document.getElementById('download-btn');
+    const backBtn = document.getElementById('back-btn');
+
+    const progressActive = document.getElementById('progress-active');
+    const progressDone = document.getElementById('progress-done');
+    const progressFill = document.getElementById('progress-fill');
+    const progressNum = document.getElementById('progress-num');
+    const emailInput = document.getElementById('email-input');
+    const emailBtn = document.getElementById('email-btn');
+    const emailStatus = document.getElementById('email-status');
+    const jobLink = document.getElementById('job-link');
+    const copyLinkBtn = document.getElementById('copy-link-btn');
+    const downloadFullBtn = document.getElementById('download-full-btn');
+    const progressBackBtn = document.getElementById('progress-back-btn');
+
+    let currentJobId = null;
+    let currentTotalSegments = 0;
+    let pollTimer = null;
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    selectBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+
+    async function handleFile(file) {
+        if (!file.name.toLowerCase().endsWith('.epub')) {
+            alert('Пожалуйста, выберите файл EPUB');
+            return;
+        }
+
+        stepUpload.innerHTML = '<div style="text-align:center;padding:20px"><div class="loader"></div> Читаю книгу…</div>';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const resp = await fetch('/preview/upload', { method: 'POST', body: formData });
+            const data = await resp.json();
+
+            if (data.status !== 'ok') {
+                stepUpload.innerHTML = `<div class="error">Ошибка: ${escapeHtml(data.message)}</div>`;
+                return;
+            }
+
+            currentJobId = data.job_id;
+            currentTotalSegments = data.total_segments;
+            bookInfo.innerHTML = `<strong>${escapeHtml(data.title)}</strong> — ${escapeHtml(data.author)} · ${data.total_segments} фрагментов`;
+
+            stepUpload.classList.add('hidden');
+            stepBook.classList.remove('hidden');
+        } catch (e) {
+            stepUpload.innerHTML = `<div class="error">Ошибка сети: ${escapeHtml(e.message)}</div>`;
+        }
+    }
+
+    previewBtn.addEventListener('click', async () => {
+        stepBook.classList.add('hidden');
+        stepResult.classList.remove('hidden');
+        original.innerHTML = '<div class="loader"></div>';
+        translation.innerHTML = '<div class="loader"></div>';
+        downloadBtn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('job_id', currentJobId);
+
+        try {
+            const resp = await fetch('/preview/translate', { method: 'POST', body: formData });
+            const data = await resp.json();
+
+            if (data.status !== 'ok') {
+                translation.innerHTML = `<div class="error">Ошибка: ${escapeHtml(data.message)}</div>`;
+                original.innerHTML = '';
+                return;
+            }
+
+            resultTitle.textContent = `Перевод первых ${data.translated_count} абзацев`;
+            original.innerHTML = '';
+            translation.innerHTML = '';
+
+            data.results.forEach(r => {
+                if (r.error) {
+                    const err = document.createElement('div');
+                    err.className = 'error';
+                    err.textContent = r.error;
+                    translation.appendChild(err);
+                    return;
+                }
+                const origDiv = document.createElement('div');
+                origDiv.className = 'segment';
+                origDiv.innerHTML = r.original_html;
+                original.appendChild(origDiv);
+
+                const transDiv = document.createElement('div');
+                transDiv.className = 'segment';
+                transDiv.innerHTML = r.translated_html;
+                translation.appendChild(transDiv);
+            });
+
+            downloadBtn.disabled = false;
+        } catch (e) {
+            translation.innerHTML = `<div class="error">Ошибка сети: ${escapeHtml(e.message)}</div>`;
+        }
+    });
+
+    downloadBtn.addEventListener('click', async () => {
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = 'Собираю…';
+
+        const formData = new FormData();
+        formData.append('job_id', currentJobId);
+
+        try {
+            const resp = await fetch('/preview/download', { method: 'POST', body: formData });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                alert('Ошибка: ' + (err.message || resp.status));
+                return;
+            }
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'translated.epub';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showFeedbackAfterDownload();
+        } catch (e) {
+            alert('Ошибка сети: ' + e.message);
+        } finally {
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = '⬇ Скачать EPUB';
+        }
+    });
+
+    backBtn.addEventListener('click', () => {
+        stepResult.classList.add('hidden');
+        stepBook.classList.remove('hidden');
+    });
+
+    fullBtn.addEventListener('click', async () => {
+        stepBook.classList.add('hidden');
+        stepProgress.classList.remove('hidden');
+        progressActive.classList.remove('hidden');
+        progressDone.classList.add('hidden');
+        progressFill.style.width = '0%';
+        progressNum.textContent = `0 / ${currentTotalSegments}`;
+
+        const link = `${window.location.origin}/job/${currentJobId}`;
+        jobLink.textContent = link;
+
+        const formData = new FormData();
+        formData.append('job_id', currentJobId);
+
+        try {
+            const resp = await fetch('/preview/translate-full', { method: 'POST', body: formData });
+            const data = await resp.json();
+
+            if (data.status !== 'ok') {
+                alert('Ошибка: ' + (data.message || 'не удалось запустить'));
+                return;
+            }
+
+            startPolling();
+        } catch (e) {
+            alert('Ошибка сети: ' + e.message);
+        }
+    });
+
+    function startPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(checkStatus, 3000);
+        checkStatus();
+    }
+
+    function stopPolling() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+    }
+
+    async function checkStatus() {
+        try {
+            const resp = await fetch(`/preview/status/${currentJobId}`);
+            const data = await resp.json();
+
+            if (data.status !== 'ok') return;
+
+            const done = data.progress || 0;
+            const total = data.total || currentTotalSegments;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+            progressFill.style.width = pct + '%';
+            progressNum.textContent = `${done} / ${total} (${pct}%)`;
+
+            if (data.job_status === 'done') {
+                stopPolling();
+                showProgressDone();
+            } else if (data.job_status === 'error') {
+                stopPolling();
+                alert('Ошибка перевода: ' + (data.error || 'неизвестная ошибка'));
+            }
+        } catch (e) {}
+    }
+
+    function showProgressDone() {
+        progressActive.classList.add('hidden');
+        progressDone.classList.remove('hidden');
+    }
+
+    emailBtn.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        if (!email || !email.includes('@')) {
+            emailStatus.innerHTML = '<div class="error" style="margin-top:8px;">Введите корректный email</div>';
+            return;
+        }
+
+        emailBtn.disabled = true;
+        emailBtn.textContent = 'Сохраняю…';
+
+        const formData = new FormData();
+        formData.append('job_id', currentJobId);
+        formData.append('email', email);
+
+        try {
+            const resp = await fetch('/preview/set-email', { method: 'POST', body: formData });
+            const data = await resp.json();
+
+            if (data.status !== 'ok') {
+                emailStatus.innerHTML = `<div class="error" style="margin-top:8px;">${escapeHtml(data.message)}</div>`;
+                emailBtn.disabled = false;
+                emailBtn.textContent = 'Отправить';
+                return;
+            }
+
+            emailStatus.innerHTML = '<div class="success">✓ Email сохранён. Пришлём ссылку, когда перевод будет готов.</div>';
+            emailBtn.textContent = 'Готово';
+        } catch (e) {
+            emailStatus.innerHTML = `<div class="error" style="margin-top:8px;">Ошибка сети: ${escapeHtml(e.message)}</div>`;
+            emailBtn.disabled = false;
+            emailBtn.textContent = 'Отправить';
+        }
+    });
+
+    copyLinkBtn.addEventListener('click', async () => {
+        const link = jobLink.textContent;
+        try {
+            await navigator.clipboard.writeText(link);
+            copyLinkBtn.textContent = '✓ Скопировано';
+            setTimeout(() => { copyLinkBtn.textContent = 'Копировать'; }, 2000);
+        } catch (e) {
+            copyLinkBtn.textContent = 'Ошибка';
+            setTimeout(() => { copyLinkBtn.textContent = 'Копировать'; }, 2000);
+        }
+    });
+
+    downloadFullBtn.addEventListener('click', async () => {
+        downloadFullBtn.disabled = true;
+        downloadFullBtn.textContent = 'Собираю…';
+
+        const formData = new FormData();
+        formData.append('job_id', currentJobId);
+
+        try {
+            const resp = await fetch('/preview/download', { method: 'POST', body: formData });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                alert('Ошибка: ' + (err.message || resp.status));
+                return;
+            }
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'translated_book.epub';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showFeedbackAfterDownload();
+        } catch (e) {
+            alert('Ошибка сети: ' + e.message);
+        } finally {
+            downloadFullBtn.disabled = false;
+            downloadFullBtn.textContent = '⬇ Скачать EPUB';
+        }
+    });
+
+    progressBackBtn.addEventListener('click', () => {
+        stopPolling();
+        stepProgress.classList.add('hidden');
+        stepBook.classList.remove('hidden');
+    });
+
+    const feedbackSection = document.getElementById('feedback-section');
+
+    function showFeedbackAfterDownload() {
+        try { localStorage.setItem('bt_has_downloaded', '1'); } catch (e) {}
+        if (!feedbackSection.classList.contains('hidden')) return;
+        feedbackSection.classList.remove('hidden');
+        setTimeout(() => {
+            feedbackSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+    }
+
+    try {
+        if (localStorage.getItem('bt_has_downloaded') === '1') {
+            feedbackSection.classList.remove('hidden');
+        }
+    } catch (e) {}
+
+    let feedbackType = 'review';
+    let feedbackRating = 0;
+
+    const feedbackTabs = document.querySelectorAll('.feedback-tab');
+    const ratingWrap = document.getElementById('rating-wrap');
+    const stars = document.querySelectorAll('.star');
+    const feedbackText = document.getElementById('feedback-text');
+    const feedbackEmail = document.getElementById('feedback-email');
+    const feedbackSubmit = document.getElementById('feedback-submit');
+    const feedbackFormWrap = document.getElementById('feedback-form-wrap');
+    const feedbackThanks = document.getElementById('feedback-thanks');
+
+    feedbackTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            feedbackTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            feedbackType = tab.dataset.type;
+            ratingWrap.style.display = feedbackType === 'suggestion' ? 'none' : 'block';
+        });
+    });
+
+    stars.forEach(star => {
+        star.addEventListener('click', () => {
+            feedbackRating = parseInt(star.dataset.value);
+            stars.forEach(s => {
+                const val = parseInt(s.dataset.value);
+                s.classList.toggle('active', val <= feedbackRating);
+            });
+        });
+    });
+
+    feedbackSubmit.addEventListener('click', async () => {
+        const text = feedbackText.value.trim();
+        if (text.length < 3) { alert('Пожалуйста, напишите чуть подробнее'); return; }
+        if (feedbackType === 'review' && feedbackRating === 0) { alert('Поставьте оценку'); return; }
+
+        feedbackSubmit.disabled = true;
+        feedbackSubmit.textContent = 'Отправляю...';
+
+        const formData = new FormData();
+        formData.append('type', feedbackType);
+        formData.append('text', text);
+        formData.append('rating', feedbackType === 'review' ? feedbackRating : 0);
+        formData.append('email', feedbackEmail.value.trim());
+
+        try {
+            const resp = await fetch('/feedback/submit', { method: 'POST', body: formData });
+            const data = await resp.json();
+            if (data.status !== 'ok') {
+                alert('Ошибка: ' + (data.message || 'не удалось отправить'));
+                feedbackSubmit.disabled = false;
+                feedbackSubmit.textContent = 'Отправить';
+                return;
+            }
+            feedbackFormWrap.classList.add('hidden');
+            feedbackThanks.classList.remove('hidden');
+        } catch (e) {
+            alert('Ошибка сети: ' + e.message);
+            feedbackSubmit.disabled = false;
+            feedbackSubmit.textContent = 'Отправить';
+        }
+    });
+</script>
+</body>
+</html>
