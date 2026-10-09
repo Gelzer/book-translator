@@ -1,0 +1,10 @@
+fastapi==0.119.1
+uvicorn[standard]==0.32.0
+python-dotenv==1.0.1
+httpx==0.27.2
+pydantic==2.12.0
+ebooklib==0.19
+beautifulsoup4==4.12.3
+lxml==6.1.1
+python-multipart==0.0.20
+aiosqlite==0.20.0
