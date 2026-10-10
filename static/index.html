@@ -37,16 +37,9 @@
             border-bottom: 1px solid var(--border);
             background: white;
         }
-        .logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--accent);
-        }
+        .logo { font-size: 20px; font-weight: 700; color: var(--accent); }
 
-        .hero {
-            text-align: center;
-            padding: 72px 0 40px;
-        }
+        .hero { text-align: center; padding: 72px 0 40px; }
         .hero h1 {
             font-family: var(--serif);
             font-size: 52px;
@@ -56,12 +49,7 @@
             margin-bottom: 20px;
         }
         .hero h1 .accent { color: var(--accent); }
-        .hero p {
-            font-size: 18px;
-            color: var(--text-muted);
-            max-width: 620px;
-            margin: 0 auto 12px;
-        }
+        .hero p { font-size: 18px; color: var(--text-muted); max-width: 620px; margin: 0 auto 12px; }
         .hero-badge {
             display: inline-block;
             margin-top: 20px;
@@ -89,25 +77,10 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .drop-zone:hover, .drop-zone.dragover {
-            border-color: var(--accent);
-            background: var(--accent-light);
-        }
-        .drop-zone-icon {
-            font-size: 40px;
-            margin-bottom: 12px;
-            color: var(--accent);
-        }
-        .drop-zone-text {
-            font-size: 17px;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-        .drop-zone-sub {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-        }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: var(--accent-light); }
+        .drop-zone-icon { font-size: 40px; margin-bottom: 12px; color: var(--accent); }
+        .drop-zone-text { font-size: 17px; margin-bottom: 6px; font-weight: 500; }
+        .drop-zone-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
 
         .btn {
             background: var(--accent);
@@ -126,15 +99,8 @@
         .btn-green { background: var(--green); }
         .btn-green:hover:not(:disabled) { background: #12642f; }
         .btn-sm { padding: 9px 18px; font-size: 14px; }
-        .btn-outline {
-            background: transparent;
-            color: var(--accent);
-            border: 2px solid var(--accent);
-        }
-        .btn-outline:hover:not(:disabled) {
-            background: var(--accent);
-            color: white;
-        }
+        .btn-outline { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+        .btn-outline:hover:not(:disabled) { background: var(--accent); color: white; }
 
         .info-bar {
             padding: 14px 18px;
@@ -146,14 +112,8 @@
         }
         .info-bar strong { color: var(--accent); }
 
-        .action-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 12px;
-        }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
 
-        /* === WARNING BOX === */
         .warning-box {
             background: var(--warning-bg);
             border: 1px solid #fcd34d;
@@ -164,31 +124,11 @@
             font-size: 14px;
             line-height: 1.6;
         }
-        .warning-box .warn-title {
-            font-weight: 600;
-            color: #92400e;
-            margin-bottom: 10px;
-            font-size: 15px;
-        }
-        .warning-box .warn-lead {
-            color: #78350f;
-            margin-bottom: 16px;
-            font-size: 14px;
-        }
-        .warn-option {
-            padding: 8px 0;
-        }
-        .warn-option-title {
-            font-weight: 600;
-            color: #92400e;
-            font-size: 14px;
-            margin-bottom: 2px;
-        }
-        .warn-option-desc {
-            font-size: 13px;
-            color: #78350f;
-            line-height: 1.5;
-        }
+        .warning-box .warn-title { font-weight: 600; color: #92400e; margin-bottom: 10px; font-size: 15px; }
+        .warning-box .warn-lead { color: #78350f; margin-bottom: 16px; font-size: 14px; }
+        .warn-option { padding: 8px 0; }
+        .warn-option-title { font-weight: 600; color: #92400e; font-size: 14px; margin-bottom: 2px; }
+        .warn-option-desc { font-size: 13px; color: #78350f; line-height: 1.5; }
         .or-divider {
             text-align: center;
             font-size: 11px;
@@ -200,92 +140,23 @@
             align-items: center;
             gap: 12px;
         }
-        .or-divider::before,
-        .or-divider::after {
-            content: "";
-            flex: 1;
-            height: 1px;
-            background: rgba(245, 158, 11, 0.4);
-        }
+        .or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: rgba(245, 158, 11, 0.4); }
 
-        /* === PROGRESS === */
-        .progress-wrap {
-            padding: 24px;
-            background: var(--accent-light);
-            border-radius: 12px;
-            margin-bottom: 24px;
-        }
-        .progress-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 14px;
-            font-size: 15px;
-            font-weight: 500;
-        }
-        .progress-bar {
-            height: 10px;
-            background: rgba(122, 31, 74, 0.15);
-            border-radius: 100px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-        .progress-fill {
-            height: 100%;
-            background: var(--accent);
-            width: 0%;
-            transition: width 0.5s ease;
-        }
-        .progress-num {
-            font-size: 13px;
-            color: var(--text-muted);
-            text-align: right;
-        }
-        .progress-done {
-            text-align: center;
-            padding: 20px;
-        }
-        .progress-done-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-        }
-        .progress-done h3 {
-            font-size: 20px;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .progress-done p {
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
+        .progress-wrap { padding: 24px; background: var(--accent-light); border-radius: 12px; margin-bottom: 24px; }
+        .progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; font-size: 15px; font-weight: 500; }
+        .progress-bar { height: 10px; background: rgba(122, 31, 74, 0.15); border-radius: 100px; overflow: hidden; margin-bottom: 10px; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; }
+        .progress-num { font-size: 13px; color: var(--text-muted); text-align: right; }
+        .progress-done { text-align: center; padding: 20px; }
+        .progress-done-icon { font-size: 48px; margin-bottom: 12px; }
+        .progress-done h3 { font-size: 20px; margin-bottom: 8px; font-weight: 600; }
+        .progress-done p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
 
-        /* === NOTIFY === */
-        .notify-section {
-            margin-top: 8px;
-        }
-        .notify-block {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 16px 18px;
-        }
-        .notify-block .block-title {
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text);
-            margin-bottom: 4px;
-        }
-        .notify-block .block-desc {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            line-height: 1.5;
-        }
-        .notify-row {
-            display: flex;
-            gap: 8px;
-        }
+        .notify-section { margin-top: 8px; }
+        .notify-block { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+        .notify-block .block-title { font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 4px; }
+        .notify-block .block-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
+        .notify-row { display: flex; gap: 8px; }
         .notify-input {
             flex: 1;
             padding: 10px 14px;
@@ -295,16 +166,8 @@
             font-family: var(--sans);
             background: white;
         }
-        .notify-input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        .link-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
+        .notify-input:focus { outline: none; border-color: var(--accent); }
+        .link-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .link-code {
             font-family: monospace;
             background: #fafaf7;
@@ -318,28 +181,12 @@
             min-width: 200px;
         }
 
-        .result-toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
+        .result-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
         .result-toolbar strong { font-size: 15px; }
         .toolbar-btns { display: flex; gap: 8px; }
 
-        .preview-box {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        .preview-col {
-            padding: 22px 24px;
-            background: #fafaf7;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
+        .preview-box { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .preview-col { padding: 22px 24px; background: #fafaf7; border-radius: 12px; border: 1px solid var(--border); }
         .preview-col h3 {
             font-size: 11px;
             letter-spacing: 1.2px;
@@ -348,37 +195,16 @@
             margin-bottom: 16px;
             font-weight: 600;
         }
-        .segment {
-            font-family: var(--serif);
-            font-size: 16px;
-            line-height: 1.7;
-            margin-bottom: 18px;
-            color: var(--text);
-        }
+        .segment { font-family: var(--serif); font-size: 16px; line-height: 1.7; margin-bottom: 18px; color: var(--text); }
         .segment:last-child { margin-bottom: 0; }
         .segment i, .segment em { font-style: italic; }
         .segment b, .segment strong { font-weight: 700; }
         .segment a { color: var(--accent); }
 
         .pricing { margin: 56px 0; text-align: center; }
-        .pricing h2 {
-            font-family: var(--serif);
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            letter-spacing: -0.5px;
-        }
-        .pricing-sub {
-            color: var(--text-muted);
-            font-size: 16px;
-            margin-bottom: 40px;
-        }
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            text-align: left;
-        }
+        .pricing h2 { font-family: var(--serif); font-size: 32px; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.5px; }
+        .pricing-sub { color: var(--text-muted); font-size: 16px; margin-bottom: 40px; }
+        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: left; }
         .plan {
             background: white;
             border: 1px solid var(--border);
@@ -388,10 +214,7 @@
             flex-direction: column;
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        .plan:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-        }
+        .plan:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
         .plan.featured {
             border-color: var(--accent);
             border-width: 2px;
@@ -413,80 +236,35 @@
             text-transform: uppercase;
             white-space: nowrap;
         }
-        .plan-name {
-            font-size: 17px;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-        .plan-desc {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            min-height: 36px;
-            line-height: 1.45;
-        }
-        .plan-price {
-            font-family: var(--serif);
-            font-size: 40px;
+        .plan-name { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+        .plan-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; min-height: 36px; line-height: 1.45; }
+        .plan-price { font-family: var(--serif); font-size: 40px; font-weight: 700; line-height: 1; margin-bottom: 4px; letter-spacing: -1px; }
+        .plan-price small { font-size: 16px; font-weight: 400; color: var(--text-muted); font-family: var(--sans); letter-spacing: 0; }
+        .plan-price-note { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; min-height: 20px; }
+        .plan-features { list-style: none; margin-bottom: 24px; flex-grow: 1; }
+        .plan-features li { font-size: 14px; padding: 7px 0; display: flex; align-items: flex-start; gap: 10px; line-height: 1.4; }
+        .plan-features li::before { content: "✓"; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+        .plan-btn { width: 100%; text-align: center; padding: 12px; font-size: 15px; }
+
+        .plan-disabled { position: relative; opacity: 0.7; }
+        .plan-disabled::after {
+            content: "СКОРО";
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #f59e0b;
+            color: white;
+            font-size: 10px;
             font-weight: 700;
-            line-height: 1;
-            margin-bottom: 4px;
-            letter-spacing: -1px;
+            letter-spacing: 1px;
+            padding: 4px 10px;
+            border-radius: 100px;
         }
-        .plan-price small {
-            font-size: 16px;
-            font-weight: 400;
-            color: var(--text-muted);
-            font-family: var(--sans);
-            letter-spacing: 0;
-        }
-        .plan-price-note {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            min-height: 20px;
-        }
-        .plan-features {
-            list-style: none;
-            margin-bottom: 24px;
-            flex-grow: 1;
-        }
-        .plan-features li {
-            font-size: 14px;
-            padding: 7px 0;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            line-height: 1.4;
-        }
-        .plan-features li::before {
-            content: "✓";
-            color: var(--accent);
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-        .plan-btn {
-            width: 100%;
-            text-align: center;
-            padding: 12px;
-            font-size: 15px;
-        }
+        .plan-disabled .plan-btn { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
 
         .feedback { margin: 56px 0; }
-        .feedback h2 {
-            font-family: var(--serif);
-            font-size: 32px;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 12px;
-            letter-spacing: -0.5px;
-        }
-        .feedback-sub {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 16px;
-            margin-bottom: 32px;
-        }
+        .feedback h2 { font-family: var(--serif); font-size: 32px; font-weight: 700; text-align: center; margin-bottom: 12px; letter-spacing: -0.5px; }
+        .feedback-sub { text-align: center; color: var(--text-muted); font-size: 16px; margin-bottom: 32px; }
         .feedback-card {
             background: white;
             border: 1px solid var(--border);
@@ -516,24 +294,9 @@
             color: var(--text-muted);
             font-family: var(--sans);
         }
-        .feedback-tab.active {
-            background: white;
-            color: var(--text);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        }
-        .stars {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-        .star {
-            font-size: 32px;
-            cursor: pointer;
-            color: #e5e7eb;
-            user-select: none;
-            line-height: 1;
-        }
+        .feedback-tab.active { background: white; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .stars { display: flex; gap: 6px; margin-bottom: 20px; justify-content: center; }
+        .star { font-size: 32px; cursor: pointer; color: #e5e7eb; user-select: none; line-height: 1; }
         .star:hover, .star.active { color: #f59e0b; }
         .feedback-textarea {
             width: 100%;
@@ -555,46 +318,14 @@
             font-family: var(--sans);
             margin-bottom: 16px;
         }
-        .feedback-submit {
-            width: 100%;
-            padding: 14px;
-            font-size: 15px;
-        }
-        .feedback-thanks {
-            text-align: center;
-            padding: 40px 20px;
-        }
-        .feedback-thanks-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-        .feedback-thanks h3 {
-            font-size: 20px;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .feedback-thanks p {
-            color: var(--text-muted);
-            font-size: 14px;
-        }
+        .feedback-submit { width: 100%; padding: 14px; font-size: 15px; }
+        .feedback-thanks { text-align: center; padding: 40px 20px; }
+        .feedback-thanks-icon { font-size: 48px; margin-bottom: 16px; }
+        .feedback-thanks h3 { font-size: 20px; margin-bottom: 8px; font-weight: 600; }
+        .feedback-thanks p { color: var(--text-muted); font-size: 14px; }
 
-        .error {
-            color: #b91c1c;
-            padding: 14px 16px;
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 10px;
-            font-size: 14px;
-        }
-        .success {
-            color: #166534;
-            padding: 10px 14px;
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            border-radius: 8px;
-            font-size: 13px;
-            margin-top: 8px;
-        }
+        .error { color: #b91c1c; padding: 14px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; font-size: 14px; }
+        .success { color: #166534; padding: 10px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 13px; margin-top: 8px; }
         .loader {
             display: inline-block;
             width: 16px;
@@ -646,7 +377,6 @@
         <div class="hero-badge">Без регистрации · Начало книги бесплатно</div>
     </section>
 
-    <!-- UPLOAD -->
     <section class="card" id="step-upload">
         <div class="drop-zone" id="drop-zone">
             <div class="drop-zone-icon">↑</div>
@@ -657,7 +387,6 @@
         </div>
     </section>
 
-    <!-- BOOK INFO -->
     <section class="card hidden" id="step-book">
         <div class="info-bar" id="book-info"></div>
         <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">
@@ -673,7 +402,6 @@
         </div>
     </section>
 
-    <!-- PREVIEW RESULT -->
     <section class="card hidden" id="step-result">
         <div class="result-toolbar">
             <strong id="result-title">Перевод первых абзацев</strong>
@@ -695,7 +423,6 @@
         </div>
     </section>
 
-    <!-- FULL PROGRESS -->
     <section class="card hidden" id="step-progress">
         <div id="progress-active">
             <h2 style="font-family: var(--serif); font-size: 26px; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.3px;">
@@ -704,24 +431,17 @@
 
             <div class="warning-box">
                 <div class="warn-title">⚠️ Если закроете вкладку — перевод продолжится, но результат пропадёт из виду</div>
-                <p class="warn-lead">
-                    Чтобы получить готовый файл, сделайте <strong>что-то одно</strong>:
-                </p>
-
+                <p class="warn-lead">Чтобы получить готовый файл, сделайте <strong>что-то одно</strong>:</p>
                 <div class="warn-option">
                     <div class="warn-option-title">① Останьтесь на этой странице</div>
                     <div class="warn-option-desc">Увидите прогресс в реальном времени и кнопку «Скачать»</div>
                 </div>
-
                 <div class="or-divider">ИЛИ</div>
-
                 <div class="warn-option">
                     <div class="warn-option-title">② Впишите email ниже</div>
                     <div class="warn-option-desc">Пришлём ссылку на готовый файл</div>
                 </div>
-
                 <div class="or-divider">ИЛИ</div>
-
                 <div class="warn-option">
                     <div class="warn-option-title">③ Сохраните ссылку ниже</div>
                     <div class="warn-option-desc">Вернётесь по ней, когда перевод будет готов</div>
@@ -729,12 +449,8 @@
             </div>
 
             <div class="progress-wrap">
-                <div class="progress-header">
-                    <span>Перевод книги…</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
-                </div>
+                <div class="progress-header"><span>Перевод книги…</span></div>
+                <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
                 <div class="progress-num" id="progress-num">0 / 0</div>
             </div>
 
@@ -748,9 +464,7 @@
                     </div>
                     <div id="email-status"></div>
                 </div>
-
                 <div class="or-divider" style="margin: 16px 0;">ИЛИ</div>
-
                 <div class="notify-block">
                     <div class="block-title">③ Сохраните ссылку</div>
                     <div class="block-desc">Вернётесь по ней, когда перевод будет готов</div>
@@ -766,9 +480,7 @@
             <div class="progress-done-icon">✅</div>
             <h3>Перевод готов!</h3>
             <p>Книга переведена и сохранена. Можно скачать.</p>
-            <button class="btn btn-green" id="download-full-btn" type="button" style="padding: 14px 32px; font-size: 15px;">
-                ⬇ Скачать EPUB
-            </button>
+            <button class="btn btn-green" id="download-full-btn" type="button" style="padding: 14px 32px; font-size: 15px;">⬇ Скачать EPUB</button>
         </div>
 
         <div style="margin-top: 20px; text-align: center;">
@@ -776,7 +488,6 @@
         </div>
     </section>
 
-    <!-- PRICING -->
     <section class="pricing">
         <h2>Простые цены</h2>
         <p class="pricing-sub">Платите только за то, что переводите. Никаких подписок.</p>
@@ -792,9 +503,7 @@
                     <li>Сохранение вёрстки</li>
                     <li>Скачивание EPUB</li>
                 </ul>
-                <button class="btn plan-btn" onclick="document.getElementById('step-upload').scrollIntoView({behavior:'smooth', block:'center'})" type="button">
-                    Попробовать
-                </button>
+                <button class="btn plan-btn" onclick="document.getElementById('step-upload').scrollIntoView({behavior:'smooth', block:'center'})" type="button">Попробовать</button>
             </div>
 
             <div class="plan featured">
@@ -809,12 +518,10 @@
                     <li>Скачивание EPUB</li>
                     <li>Приоритетная очередь</li>
                 </ul>
-                <button class="btn plan-btn" onclick="document.getElementById('step-upload').scrollIntoView({behavior:'smooth', block:'center'})" type="button">
-                    Выбрать
-                </button>
+                <button class="btn plan-btn" onclick="document.getElementById('step-upload').scrollIntoView({behavior:'smooth', block:'center'})" type="button">Выбрать</button>
             </div>
 
-            <div class="plan">
+            <div class="plan plan-disabled">
                 <div class="plan-name">Серия книг</div>
                 <div class="plan-desc">Для авторов серий и сериалов — с общим глоссарием</div>
                 <div class="plan-price">3900 <small>₽</small></div>
@@ -825,14 +532,11 @@
                     <li>Единый стиль перевода</li>
                     <li>Приоритетная поддержка</li>
                 </ul>
-                <button class="btn plan-btn" onclick="document.getElementById('step-upload').scrollIntoView({behavior:'smooth', block:'center'})" type="button">
-                    Выбрать
-                </button>
+                <button class="btn plan-btn" type="button" disabled>Временно недоступно</button>
             </div>
         </div>
     </section>
 
-    <!-- FEEDBACK -->
     <section class="feedback hidden" id="feedback-section">
         <h2>Помогите нам стать лучше</h2>
         <p class="feedback-sub">Расскажите, что понравилось, что сломалось или чего не хватает</p>
@@ -843,7 +547,6 @@
                     <button class="feedback-tab active" data-type="review" type="button">Оставить отзыв</button>
                     <button class="feedback-tab" data-type="suggestion" type="button">Предложить улучшение</button>
                 </div>
-
                 <div id="rating-wrap">
                     <div class="stars" id="stars">
                         <span class="star" data-value="1">★</span>
@@ -853,12 +556,10 @@
                         <span class="star" data-value="5">★</span>
                     </div>
                 </div>
-
                 <textarea class="feedback-textarea" id="feedback-text" placeholder="Расскажите подробнее..."></textarea>
                 <input type="email" class="feedback-input" id="feedback-email" placeholder="Email (необязательно, если хотите ответ)">
                 <button class="btn feedback-submit" id="feedback-submit" type="button">Отправить</button>
             </div>
-
             <div id="feedback-thanks" class="feedback-thanks hidden">
                 <div class="feedback-thanks-icon">🙏</div>
                 <h3>Спасибо!</h3>
@@ -870,9 +571,7 @@
 </main>
 
 <footer class="footer">
-    <div class="container">
-        Book Translator · AI-перевод книг с сохранением вёрстки
-    </div>
+    <div class="container">Book Translator · AI-перевод книг с сохранением вёрстки</div>
 </footer>
 
 <script>
@@ -911,36 +610,25 @@
     function escapeHtml(str) {
         if (!str) return '';
         return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
     selectBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
     dropZone.addEventListener('click', () => fileInput.click());
-
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
-    });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
     });
-
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length) handleFile(fileInput.files[0]);
     });
 
     async function handleFile(file) {
-        if (!file.name.toLowerCase().endsWith('.epub')) {
-            alert('Пожалуйста, выберите файл EPUB');
-            return;
-        }
+        if (!file.name.toLowerCase().endsWith('.epub')) { alert('Пожалуйста, выберите файл EPUB'); return; }
 
         stepUpload.innerHTML = '<div style="text-align:center;padding:20px"><div class="loader"></div> Читаю книгу…</div>';
 
@@ -1053,30 +741,23 @@
         stepBook.classList.remove('hidden');
     });
 
+    // === КНОПКА "ПЕРЕВЕСТИ ВСЮ КНИГУ" → ОПЛАТА ЮKassa ===
     fullBtn.addEventListener('click', async () => {
-        stepBook.classList.add('hidden');
-        stepProgress.classList.remove('hidden');
-        progressActive.classList.remove('hidden');
-        progressDone.classList.add('hidden');
-        progressFill.style.width = '0%';
-        progressNum.textContent = `0 / ${currentTotalSegments}`;
-
-        const link = `${window.location.origin}/job/${currentJobId}`;
-        jobLink.textContent = link;
-
         const formData = new FormData();
         formData.append('job_id', currentJobId);
 
         try {
-            const resp = await fetch('/preview/translate-full', { method: 'POST', body: formData });
+            const resp = await fetch('/preview/create-payment', { method: 'POST', body: formData });
             const data = await resp.json();
 
             if (data.status !== 'ok') {
-                alert('Ошибка: ' + (data.message || 'не удалось запустить'));
+                alert('Ошибка: ' + (data.message || 'не удалось создать платёж'));
                 return;
             }
 
-            startPolling();
+            try { localStorage.setItem('bt_pending_job', currentJobId); } catch (e) {}
+
+            window.location.href = data.confirmation_url;
         } catch (e) {
             alert('Ошибка сети: ' + e.message);
         }
@@ -1089,17 +770,13 @@
     }
 
     function stopPolling() {
-        if (pollTimer) {
-            clearInterval(pollTimer);
-            pollTimer = null;
-        }
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
     }
 
     async function checkStatus() {
         try {
             const resp = await fetch(`/preview/status/${currentJobId}`);
             const data = await resp.json();
-
             if (data.status !== 'ok') return;
 
             const done = data.progress || 0;
@@ -1148,7 +825,6 @@
                 emailBtn.textContent = 'Отправить';
                 return;
             }
-
             emailStatus.innerHTML = '<div class="success">✓ Email сохранён. Пришлём ссылку, когда перевод будет готов.</div>';
             emailBtn.textContent = 'Готово';
         } catch (e) {
@@ -1214,9 +890,7 @@
         try { localStorage.setItem('bt_has_downloaded', '1'); } catch (e) {}
         if (!feedbackSection.classList.contains('hidden')) return;
         feedbackSection.classList.remove('hidden');
-        setTimeout(() => {
-            feedbackSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 200);
+        setTimeout(() => { feedbackSection.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200);
     }
 
     try {
@@ -1287,6 +961,52 @@
             feedbackSubmit.textContent = 'Отправить';
         }
     });
+
+    // === ПРОВЕРКА ВОЗВРАТА С ОПЛАТЫ ЮKassa ===
+    (async function checkPaymentReturn() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('payment') !== '1') return;
+
+        const jobId = params.get('job_id') || localStorage.getItem('bt_pending_job');
+        if (!jobId) return;
+
+        stepUpload.classList.add('hidden');
+        stepBook.classList.add('hidden');
+        stepResult.classList.add('hidden');
+        stepProgress.classList.remove('hidden');
+        progressActive.classList.remove('hidden');
+        progressDone.classList.add('hidden');
+        progressFill.style.width = '0%';
+        progressNum.textContent = 'Проверка оплаты…';
+
+        currentJobId = jobId;
+        jobLink.textContent = `${window.location.origin}/preview/job/${jobId}`;
+
+        const fd = new FormData();
+        fd.append('job_id', jobId);
+
+        try {
+            const resp = await fetch('/preview/verify-payment', { method: 'POST', body: fd });
+            const data = await resp.json();
+
+            if (data.status === 'ok' && data.paid) {
+                try { localStorage.removeItem('bt_pending_job'); } catch (e) {}
+
+                const fd2 = new FormData();
+                fd2.append('job_id', jobId);
+                await fetch('/preview/translate-full', { method: 'POST', body: fd2 });
+
+                window.history.replaceState({}, '', window.location.pathname);
+                startPolling();
+            } else {
+                alert('Оплата не подтверждена. Статус: ' + (data.payment_status || 'неизвестно'));
+                window.location.href = window.location.pathname;
+            }
+        } catch (e) {
+            alert('Ошибка проверки оплаты: ' + e.message);
+            window.location.href = window.location.pathname;
+        }
+    })();
 </script>
 </body>
 </html>
