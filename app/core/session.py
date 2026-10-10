@@ -63,9 +63,7 @@ class JobStore:
         self.db_path = str(DB_PATH)
 
     async def init(self) -> None:
-        """Создаёт таблицу, если её нет. Вызывается при старте приложения."""
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS jobs (
@@ -80,6 +78,12 @@ class JobStore:
                     error TEXT NOT NULL DEFAULT ''
                 )
             """)
+            # Добавляем колонку payment_id, если её ещё нет
+            try:
+                await db.execute("ALTER TABLE jobs ADD COLUMN payment_id TEXT NOT NULL DEFAULT ''")
+            except Exception:
+                pass  # колонка уже существует
+
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS translations (
                     job_id TEXT NOT NULL,
@@ -127,6 +131,7 @@ class JobStore:
             "total_segments": row["total_segments"],
             "email": row["email"],
             "error": row["error"],
+            "payment_id": row["payment_id"],
         }
 
     async def update_status(self, job_id: str, status: str, error: str = "") -> None:
@@ -184,6 +189,14 @@ class JobStore:
         if row is None:
             return None
         return json.loads(row[0])
+
+    async def set_payment_id(self, job_id: str, payment_id: str) -> None:
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                "UPDATE jobs SET payment_id = ? WHERE id = ?",
+                (payment_id, job_id),
+            )
+            await db.commit()    
 
     async def cleanup_old(self, ttl_hours: int = 24) -> int:
         """Удаляет задачи старше N часов."""
