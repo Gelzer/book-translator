@@ -14,6 +14,10 @@ class Settings:
     GENAPI_MODEL: str = os.getenv("GENAPI_MODEL", "gpt-4o-mini")
     MOCK_TRANSLATION: bool = os.getenv("MOCK_TRANSLATION", "false").lower() == "true"
 
+    # --- Telegram ---
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
+
     # --- Сервер ---
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
