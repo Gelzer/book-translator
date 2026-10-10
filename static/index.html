@@ -32,11 +32,7 @@
 
         .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
 
-        .header {
-            padding: 20px 0;
-            border-bottom: 1px solid var(--border);
-            background: white;
-        }
+        .header { padding: 20px 0; border-bottom: 1px solid var(--border); background: white; }
         .logo { font-size: 20px; font-weight: 700; color: var(--accent); }
 
         .hero { text-align: center; padding: 72px 0 40px; }
@@ -741,7 +737,6 @@
         stepBook.classList.remove('hidden');
     });
 
-    // === КНОПКА "ПЕРЕВЕСТИ ВСЮ КНИГУ" → ОПЛАТА ЮKassa ===
     fullBtn.addEventListener('click', async () => {
         const formData = new FormData();
         formData.append('job_id', currentJobId);
@@ -888,9 +883,10 @@
 
     function showFeedbackAfterDownload() {
         try { localStorage.setItem('bt_has_downloaded', '1'); } catch (e) {}
-        if (!feedbackSection.classList.contains('hidden')) return;
         feedbackSection.classList.remove('hidden');
-        setTimeout(() => { feedbackSection.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200);
+        setTimeout(() => {
+            feedbackSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 400);
     }
 
     try {
@@ -962,7 +958,6 @@
         }
     });
 
-    // === ПРОВЕРКА ВОЗВРАТА С ОПЛАТЫ ЮKassa ===
     (async function checkPaymentReturn() {
         const params = new URLSearchParams(window.location.search);
         if (params.get('payment') !== '1') return;
