@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, FileResponse
 
 from config import settings
 from app.parsers.epub_parser import parse_epub
-from app.translators.genapi_client import translate_text, translate_batch
+from app.translators.genapi_client import translate_text, translate_batch, review_batch
 from app.placeholders.restorer import restore_placeholders
 from app.builders.epub_builder import build_translated_epub
 from app.core.session import job_store
