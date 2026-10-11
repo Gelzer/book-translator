@@ -120,23 +120,8 @@
             font-size: 14px;
             line-height: 1.6;
         }
-        .warning-box .warn-title { font-weight: 600; color: #92400e; margin-bottom: 10px; font-size: 15px; }
-        .warning-box .warn-lead { color: #78350f; margin-bottom: 16px; font-size: 14px; }
-        .warn-option { padding: 8px 0; }
-        .warn-option-title { font-weight: 600; color: #92400e; font-size: 14px; margin-bottom: 2px; }
-        .warn-option-desc { font-size: 13px; color: #78350f; line-height: 1.5; }
-        .or-divider {
-            text-align: center;
-            font-size: 11px;
-            color: #b45309;
-            font-weight: 700;
-            letter-spacing: 2px;
-            margin: 6px 0;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: rgba(245, 158, 11, 0.4); }
+        .warning-box .warn-title { font-weight: 600; color: #92400e; margin-bottom: 10px; font-size: 16px; }
+        .warning-box .warn-lead { color: #78350f; margin-bottom: 16px; font-size: 15px; }
 
         .progress-wrap { padding: 24px; background: var(--accent-light); border-radius: 12px; margin-bottom: 24px; }
         .progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; font-size: 15px; font-weight: 500; }
@@ -148,33 +133,17 @@
         .progress-done h3 { font-size: 20px; margin-bottom: 8px; font-weight: 600; }
         .progress-done p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
 
-        .notify-section { margin-top: 8px; }
-        .notify-block { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
-        .notify-block .block-title { font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 4px; }
-        .notify-block .block-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
-        .notify-row { display: flex; gap: 8px; }
-        .notify-input {
-            flex: 1;
-            padding: 10px 14px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: var(--sans);
-            background: white;
-        }
-        .notify-input:focus { outline: none; border-color: var(--accent); }
-        .link-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .link-row { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
         .link-code {
             font-family: monospace;
-            background: #fafaf7;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border);
+            background: white;
+            padding: 14px 16px;
+            border-radius: 8px;
+            border: 2px solid var(--accent);
             color: var(--text);
-            font-size: 12.5px;
+            font-size: 14px;
             word-break: break-all;
-            flex: 1;
-            min-width: 200px;
+            text-align: center;
         }
 
         .result-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -353,7 +322,6 @@
             .hero h1 { font-size: 34px; }
             .preview-box { grid-template-columns: 1fr; }
             .card { padding: 22px; }
-            .notify-row { flex-direction: column; }
         }
     </style>
 </head>
@@ -426,21 +394,19 @@
             </h2>
 
             <div class="warning-box">
-                <div class="warn-title">⚠️ Если закроете вкладку — перевод продолжится, но результат пропадёт из виду</div>
-                <p class="warn-lead">Чтобы получить готовый файл, сделайте <strong>что-то одно</strong>:</p>
-                <div class="warn-option">
-                    <div class="warn-option-title">① Останьтесь на этой странице</div>
-                    <div class="warn-option-desc">Увидите прогресс в реальном времени и кнопку «Скачать»</div>
-                </div>
-                <div class="or-divider">ИЛИ</div>
-                <div class="warn-option">
-                    <div class="warn-option-title">② Впишите email ниже</div>
-                    <div class="warn-option-desc">Пришлём ссылку на готовый файл</div>
-                </div>
-                <div class="or-divider">ИЛИ</div>
-                <div class="warn-option">
-                    <div class="warn-option-title">③ Сохраните ссылку ниже</div>
-                    <div class="warn-option-desc">Вернётесь по ней, когда перевод будет готов</div>
+                <div class="warn-title">⚠️ Обязательно сохраните эту ссылку</div>
+                <p class="warn-lead">
+                    Если закроете вкладку — <strong>вернуться к результату можно будет только по ссылке ниже</strong>. Письма на почту мы пока не отправляем.
+                </p>
+                <p class="warn-lead" style="margin-bottom: 20px;">
+                    Сохраните её в закладки, заметки или отправьте себе в Telegram.
+                </p>
+
+                <div class="link-row">
+                    <div class="link-code" id="job-link">—</div>
+                    <button class="btn" id="copy-link-btn" type="button" style="padding: 14px; font-size: 15px;">
+                        📋 Скопировать ссылку
+                    </button>
                 </div>
             </div>
 
@@ -450,25 +416,8 @@
                 <div class="progress-num" id="progress-num">0 / 0</div>
             </div>
 
-            <div class="notify-section">
-                <div class="notify-block">
-                    <div class="block-title">② Впишите email</div>
-                    <div class="block-desc">Пришлём ссылку, когда перевод будет готов</div>
-                    <div class="notify-row">
-                        <input type="email" class="notify-input" id="email-input" placeholder="your@email.com">
-                        <button class="btn" id="email-btn" type="button" style="white-space: nowrap;">Отправить</button>
-                    </div>
-                    <div id="email-status"></div>
-                </div>
-                <div class="or-divider" style="margin: 16px 0;">ИЛИ</div>
-                <div class="notify-block">
-                    <div class="block-title">③ Сохраните ссылку</div>
-                    <div class="block-desc">Вернётесь по ней, когда перевод будет готов</div>
-                    <div class="link-row">
-                        <span class="link-code" id="job-link">—</span>
-                        <button class="btn btn-sm btn-outline" id="copy-link-btn" type="button">Копировать</button>
-                    </div>
-                </div>
+            <div style="padding: 14px 18px; background: #fafaf7; border-radius: 10px; border: 1px solid var(--border); font-size: 14px; color: var(--text-muted);">
+                💡 Можете закрыть вкладку — перевод продолжится на сервере. Но чтобы скачать результат, понадобится ссылка выше.
             </div>
         </div>
 
@@ -591,9 +540,6 @@
     const progressDone = document.getElementById('progress-done');
     const progressFill = document.getElementById('progress-fill');
     const progressNum = document.getElementById('progress-num');
-    const emailInput = document.getElementById('email-input');
-    const emailBtn = document.getElementById('email-btn');
-    const emailStatus = document.getElementById('email-status');
     const jobLink = document.getElementById('job-link');
     const copyLinkBtn = document.getElementById('copy-link-btn');
     const downloadFullBtn = document.getElementById('download-full-btn');
@@ -796,48 +742,15 @@
         progressDone.classList.remove('hidden');
     }
 
-    emailBtn.addEventListener('click', async () => {
-        const email = emailInput.value.trim();
-        if (!email || !email.includes('@')) {
-            emailStatus.innerHTML = '<div class="error" style="margin-top:8px;">Введите корректный email</div>';
-            return;
-        }
-
-        emailBtn.disabled = true;
-        emailBtn.textContent = 'Сохраняю…';
-
-        const formData = new FormData();
-        formData.append('job_id', currentJobId);
-        formData.append('email', email);
-
-        try {
-            const resp = await fetch('/preview/set-email', { method: 'POST', body: formData });
-            const data = await resp.json();
-
-            if (data.status !== 'ok') {
-                emailStatus.innerHTML = `<div class="error" style="margin-top:8px;">${escapeHtml(data.message)}</div>`;
-                emailBtn.disabled = false;
-                emailBtn.textContent = 'Отправить';
-                return;
-            }
-            emailStatus.innerHTML = '<div class="success">✓ Email сохранён. Пришлём ссылку, когда перевод будет готов.</div>';
-            emailBtn.textContent = 'Готово';
-        } catch (e) {
-            emailStatus.innerHTML = `<div class="error" style="margin-top:8px;">Ошибка сети: ${escapeHtml(e.message)}</div>`;
-            emailBtn.disabled = false;
-            emailBtn.textContent = 'Отправить';
-        }
-    });
-
     copyLinkBtn.addEventListener('click', async () => {
         const link = jobLink.textContent;
         try {
             await navigator.clipboard.writeText(link);
             copyLinkBtn.textContent = '✓ Скопировано';
-            setTimeout(() => { copyLinkBtn.textContent = 'Копировать'; }, 2000);
+            setTimeout(() => { copyLinkBtn.textContent = '📋 Скопировать ссылку'; }, 2000);
         } catch (e) {
             copyLinkBtn.textContent = 'Ошибка';
-            setTimeout(() => { copyLinkBtn.textContent = 'Копировать'; }, 2000);
+            setTimeout(() => { copyLinkBtn.textContent = '📋 Скопировать ссылку'; }, 2000);
         }
     });
 
