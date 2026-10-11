@@ -1,11 +1,10 @@
-"""Отправка email через SMTP (Яндекс.Почта и др.)."""
-import smtplib
-import traceback
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.header import Header
+"""Отправка email через Resend HTTP API (работает на Render)."""
+import httpx
 
 from config import settings
+
+
+RESEND_API_URL = "https://api.resend.com/emails"
 
 
 def send_translation_ready(
@@ -14,11 +13,11 @@ def send_translation_ready(
     book_title: str,
 ) -> tuple[bool, str]:
     """
-    Отправляет письмо «перевод готов».
+    Отправляет письмо «перевод готов» через Resend.
     Возвращает (успех, текст_ошибки_или_пустая_строка).
     """
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        return False, "SMTP не настроен (нет SMTP_USER или SMTP_PASSWORD)"
+    if not settings.RESEND_API_KEY:
+        return False, "RESEND_API_KEY не задан в .env"
 
     if not to_email or "@" not in to_email:
         return False, f"Некорректный email: {to_email}"
@@ -50,23 +49,31 @@ def send_translation_ready(
     </html>
     """
 
-    plain_body = f"Перевод книги «{book_title}» готов.\n\nСкачать: {download_url}\n\n— Book Translator"
+    payload = {
+        "from": settings.EMAIL_FROM,
+        "to": [to_email],
+        "subject": subject,
+        "html": html_body,
+    }
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = Header(subject, "utf-8")
-    msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_USER}>"
-    msg["To"] = to_email
-    msg.attach(MIMEText(plain_body, "plain", "utf-8"))
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
+    headers = {
+        "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+        "Content-Type": "application/json",
+    }
 
     try:
-        with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            server.send_message(msg)
+        with httpx.Client(timeout=15.0) as client:
+            resp = client.post(RESEND_API_URL, json=payload, headers=headers)
+            if resp.status_code >= 400:
+                err = f"HTTP {resp.status_code}: {resp.text[:300]}"
+                print(f"=== EMAIL ERROR ===")
+                print(err)
+                print("===================")
+                return False, err
         return True, ""
     except Exception as e:
-        err = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
-        print("=== EMAIL ERROR ===")
+        err = f"{type(e).__name__}: {e}"
+        print(f"=== EMAIL EXCEPTION ===")
         print(err)
-        print("===================")
-        return False, str(e)
+        print("=======================")
+        return False, err
