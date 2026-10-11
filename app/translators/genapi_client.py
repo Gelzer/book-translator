@@ -88,6 +88,23 @@ class GenAPIClient:
         raw = self._chat(BATCH_SYSTEM_PROMPT, user, temperature, max_tokens=4000)
         return parse_batch_response(raw)
 
+    def review_batch(
+        self,
+        segments: list[tuple[str, str]],
+        temperature: float = 0.1,
+    ) -> dict:
+        """
+        QA-проход: проверка и исправление готового перевода.
+        Возвращает {segment_id: исправленный_перевод}.
+        """
+        if settings.MOCK_TRANSLATION:
+            return {seg_id: text for seg_id, text in segments}
+
+        from app.translators.prompts import QA_SYSTEM_PROMPT, build_qa_prompt
+        user = build_qa_prompt(segments)
+        raw = self._chat(QA_SYSTEM_PROMPT, user, temperature, max_tokens=4000)
+        return parse_batch_response(raw)
+
 
 client = GenAPIClient()
 
@@ -114,3 +131,9 @@ def translate_batch(
     if glossary is None:
         glossary = BASE_GLOSSARY
     return client.translate_batch(segments, source_lang, target_lang, glossary=glossary)
+
+def review_batch(
+    segments: list[tuple[str, str]],
+) -> dict:
+    """Обёртка для QA-проверки перевода."""
+    return client.review_batch(segments)
