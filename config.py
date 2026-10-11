@@ -24,12 +24,9 @@ class Settings:
     YOOKASSA_RETURN_URL: str = os.getenv("YOOKASSA_RETURN_URL", "http://localhost:8000/ui/")
     BOOK_PRICE_RUB: int = int(os.getenv("BOOK_PRICE_RUB", "990"))
 
-    # --- Email (SMTP) ---
-    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.yandex.ru")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "465"))
-    SMTP_USER: str = os.getenv("SMTP_USER", "")
-    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
-    SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "Book Translator")
+    # --- Email (Resend) ---
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "Book Translator <onboarding@resend.dev>")
     PUBLIC_URL: str = os.getenv("PUBLIC_URL", "http://localhost:8000")
 
     # --- Сервер ---
