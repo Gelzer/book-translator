@@ -727,6 +727,18 @@
             progressFill.style.width = pct + '%';
             progressNum.textContent = `${done} / ${total} (${pct}%)`;
 
+            // Меняем текст в зависимости от фазы
+            const phaseEl = document.querySelector('.progress-header span');
+            if (phaseEl) {
+                if (data.job_status === 'translating') {
+                    phaseEl.textContent = 'Перевод книги…';
+                } else if (data.job_status === 'reviewing') {
+                    phaseEl.textContent = 'Проверка перевода (QA)…';
+                } else if (data.job_status === 'done') {
+                    phaseEl.textContent = 'Готово';
+                }
+            }
+
             if (data.job_status === 'done') {
                 stopPolling();
                 showProgressDone();
