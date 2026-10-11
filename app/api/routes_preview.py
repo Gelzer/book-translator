@@ -138,9 +138,11 @@ async def _translate_book_background(job_id: str) -> None:
             return
 
         total = len(segments)
-        await job_store.update_status(job_id, "translating")
-
         translations_map = {}
+
+        # ============ ФАЗА 1: ОСНОВНОЙ ПЕРЕВОД ============
+        await job_store.update_status(job_id, "translating")
+        await job_store.update_progress(job_id, 0)
 
         for i in range(0, total, BATCH_SIZE):
             batch_segs = segments[i:i + BATCH_SIZE]
@@ -164,9 +166,7 @@ async def _translate_book_background(job_id: str) -> None:
                         continue
                     try:
                         translated = translate_text(
-                            text,
-                            source_lang=book.language,
-                            target_lang="ru",
+                            text, source_lang=book.language, target_lang="ru"
                         )
                         translations_map[seg_id] = translated
                     except Exception:
@@ -175,9 +175,7 @@ async def _translate_book_background(job_id: str) -> None:
                 for seg_id, text in batch_input:
                     try:
                         translated = translate_text(
-                            text,
-                            source_lang=book.language,
-                            target_lang="ru",
+                            text, source_lang=book.language, target_lang="ru"
                         )
                         translations_map[seg_id] = translated
                     except Exception:
@@ -185,10 +183,47 @@ async def _translate_book_background(job_id: str) -> None:
 
             await job_store.update_progress(job_id, min(i + BATCH_SIZE, total))
 
-        await job_store.save_translation(job_id, KEY_FULL_BOOK, translations_map)
+        # ============ ФАЗА 2: QA-ПРОВЕРКА ============
+        await job_store.update_status(job_id, "reviewing")
+        await job_store.update_progress(job_id, 0)
+
+        reviewed_map = {}
+
+        for i in range(0, total, BATCH_SIZE):
+            batch_segs = segments[i:i + BATCH_SIZE]
+
+            # Собираем переводы для батча (только те, что перевелись)
+            qa_input = []
+            for seg in batch_segs:
+                if seg.id in translations_map:
+                    qa_input.append((seg.id, translations_map[seg.id]))
+
+            if not qa_input:
+                continue
+
+            if settings.MOCK_TRANSLATION:
+                await asyncio.sleep(0.2)
+
+            try:
+                result = review_batch(qa_input)
+                reviewed_map.update(result)
+
+                # Если какой-то сегмент не вернулся — оставляем оригинальный перевод
+                missing = {sid for sid, _ in qa_input} - set(result.keys())
+                for seg_id in missing:
+                    reviewed_map[seg_id] = translations_map[seg_id]
+            except Exception:
+                # При сбое QA — оставляем исходный перевод
+                for seg_id, text in qa_input:
+                    reviewed_map[seg_id] = text
+
+            await job_store.update_progress(job_id, min(i + BATCH_SIZE, total))
+
+        # ============ СОХРАНЕНИЕ ============
+        await job_store.save_translation(job_id, KEY_FULL_BOOK, reviewed_map)
         await job_store.update_status(job_id, "done")
 
-         # Отправляем email, если он указан
+        # Отправляем email, если он указан
         try:
             job = await job_store.get(job_id)
             if job and job.get("email"):
