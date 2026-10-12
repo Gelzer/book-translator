@@ -122,7 +122,7 @@ def _process_html(html: str, file_key: str, translations: dict) -> Tuple[str, di
         # Убираем оставшиеся плейсхолдеры
         translated_html = LEFTOVER_PLACEHOLDER.sub("", translated_html)
 
-        # Убираем markdown-решётки в начале (LLM иногда добавляет)
+        # Убираем markdown-решётки в начале
         translated_html = MARKDOWN_HASH_PREFIX.sub("", translated_html)
 
         tag_name = block.name
