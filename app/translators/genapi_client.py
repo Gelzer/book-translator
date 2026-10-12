@@ -3,10 +3,13 @@ import httpx
 
 from config import settings
 from app.translators.prompts import (
-    SYSTEM_PROMPT,
-    BATCH_SYSTEM_PROMPT,
+    GENDER_DETECT_PROMPT,
+    QA_SYSTEM_PROMPT,
+    build_system_prompt,
+    build_batch_system_prompt,
     build_user_prompt,
     build_batch_prompt,
+    build_qa_prompt,
     parse_batch_response,
     BASE_GLOSSARY,
 )
@@ -59,6 +62,31 @@ class GenAPIClient:
         except (KeyError, IndexError) as e:
             raise RuntimeError(f"Неожиданный ответ от GenAPI: {data}") from e
 
+    def detect_narrator_gender(self, sample_text: str) -> str:
+        """
+        Определяет пол рассказчика по фрагменту текста.
+        Возвращает 'male', 'female' или 'unknown'.
+        """
+        if settings.MOCK_TRANSLATION:
+            return "male"
+
+        try:
+            raw = self._chat(
+                GENDER_DETECT_PROMPT,
+                sample_text[:3000],
+                temperature=0.0,
+                max_tokens=20,
+            )
+        except Exception:
+            return "unknown"
+
+        raw_lower = raw.lower()
+        if "female" in raw_lower:
+            return "female"
+        if "male" in raw_lower:
+            return "male"
+        return "unknown"
+
     def translate(
         self,
         text: str,
@@ -66,12 +94,13 @@ class GenAPIClient:
         target_lang: str = "ru",
         temperature: float = 0.3,
         glossary: dict | None = None,
+        gender: str | None = None,
     ) -> str:
-        """Перевод одного фрагмента."""
         if settings.MOCK_TRANSLATION:
             return f"[ТЕСТ] {text[:120]}..."
         user = build_user_prompt(text, source_lang, target_lang, glossary)
-        return self._chat(SYSTEM_PROMPT, user, temperature)
+        system = build_system_prompt(gender)
+        return self._chat(system, user, temperature)
 
     def translate_batch(
         self,
@@ -80,12 +109,13 @@ class GenAPIClient:
         target_lang: str = "ru",
         temperature: float = 0.3,
         glossary: dict | None = None,
+        gender: str | None = None,
     ) -> dict:
-        """Перевод батча фрагментов. Возвращает {segment_id: translated_text}."""
         if settings.MOCK_TRANSLATION:
             return {seg_id: f"[ТЕСТ] {text[:120]}..." for seg_id, text in segments}
         user = build_batch_prompt(segments, source_lang, target_lang, glossary)
-        raw = self._chat(BATCH_SYSTEM_PROMPT, user, temperature, max_tokens=4000)
+        system = build_batch_system_prompt(gender)
+        raw = self._chat(system, user, temperature, max_tokens=4000)
         return parse_batch_response(raw)
 
     def review_batch(
@@ -93,14 +123,9 @@ class GenAPIClient:
         segments: list[tuple[str, str]],
         temperature: float = 0.1,
     ) -> dict:
-        """
-        QA-проход: проверка и исправление готового перевода.
-        Возвращает {segment_id: исправленный_перевод}.
-        """
+        """QA-проход: только замена английских слов на русские."""
         if settings.MOCK_TRANSLATION:
             return {seg_id: text for seg_id, text in segments}
-
-        from app.translators.prompts import QA_SYSTEM_PROMPT, build_qa_prompt
         user = build_qa_prompt(segments)
         raw = self._chat(QA_SYSTEM_PROMPT, user, temperature, max_tokens=4000)
         return parse_batch_response(raw)
@@ -109,16 +134,20 @@ class GenAPIClient:
 client = GenAPIClient()
 
 
+def detect_narrator_gender(sample_text: str) -> str:
+    return client.detect_narrator_gender(sample_text)
+
+
 def translate_text(
     text: str,
     source_lang: str = "en",
     target_lang: str = "ru",
     glossary: dict | None = None,
+    gender: str | None = None,
 ) -> str:
-    """Обёртка для перевода одного фрагмента."""
     if glossary is None:
         glossary = BASE_GLOSSARY
-    return client.translate(text, source_lang, target_lang, glossary=glossary)
+    return client.translate(text, source_lang, target_lang, glossary=glossary, gender=gender)
 
 
 def translate_batch(
@@ -126,14 +155,12 @@ def translate_batch(
     source_lang: str = "en",
     target_lang: str = "ru",
     glossary: dict | None = None,
+    gender: str | None = None,
 ) -> dict:
-    """Обёртка для батч-перевода."""
     if glossary is None:
         glossary = BASE_GLOSSARY
-    return client.translate_batch(segments, source_lang, target_lang, glossary=glossary)
+    return client.translate_batch(segments, source_lang, target_lang, glossary=glossary, gender=gender)
 
-def review_batch(
-    segments: list[tuple[str, str]],
-) -> dict:
-    """Обёртка для QA-проверки перевода."""
+
+def review_batch(segments: list[tuple[str, str]]) -> dict:
     return client.review_batch(segments)
