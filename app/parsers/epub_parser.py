@@ -1,7 +1,6 @@
 """
 Парсер EPUB. Извлекает текстовые сегменты с сохранением вёрстки.
 """
-import re
 from pathlib import Path
 from typing import List
 
@@ -15,7 +14,7 @@ from app.placeholders.extractor import extract_placeholders
 
 BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "li", "div"]
 
-# Служебные классы Project Gutenberg — не переводим
+# Классы служебных блоков Gutenberg
 BOILERPLATE_CLASSES = {
     "pg-boilerplate",
     "pgheader",
@@ -27,15 +26,50 @@ BOILERPLATE_CLASSES = {
     "pgtranscriber",
 }
 
-# Служебные фразы — если сегмент содержит их, пропускаем
+# Служебные фразы — если сегмент их содержит, пропускаем
 BOILERPLATE_PHRASES = [
     "START OF THE PROJECT GUTENBERG",
     "END OF THE PROJECT GUTENBERG",
     "START OF THIS PROJECT GUTENBERG",
     "END OF THIS PROJECT GUTENBERG",
+    "START: FULL LICENSE",
     "Transcriber's Notes",
     "Transcriber’s Notes",
+    "Updated editions will replace",
+    "Creating the works from print editions",
+    "PLEASE READ THIS BEFORE",
     "Most recently updated:",
+    "**Section 1.",
+    "Section 1. General Terms",
+    "Section 2. Information about",
+    "Section 3. Information about",
+    "Section 4. Information about",
+    "Section 5. General Information",
+    "THE FULL PROJECT GUTENBERG",
+    "1.A. By reading",
+    "1.B. \"Project Gutenberg\"",
+    "1.C. The Project Gutenberg",
+    "1.D. The copyright laws",
+    "1.E. Unless you have removed",
+    "1.F.",
+    "1.F.1.",
+    "1.F.2.",
+    "1.F.3.",
+    "1.F.4.",
+    "1.F.5.",
+    "1.F.6.",
+    "Professor Michael S. Hart",
+    "This website includes information about Project Gutenberg",
+]
+
+# Имена файлов, которые пропускаем целиком (это footer/backmatter)
+BOILERPLATE_FILENAMES_KEYWORDS = [
+    "pg-footer",
+    "pgfooter",
+    "colophon",
+    "backmatter",
+    "back-matter",
+    "end-matter",
 ]
 
 
@@ -62,6 +96,10 @@ class EpubParser(BookParser):
             chapter_name = item.get_name()
             file_key = Path(chapter_name).name.rsplit(".", 1)[0]
 
+            # Пропускаем служебные файлы по имени
+            if self._is_boilerplate_file(chapter_name):
+                continue
+
             html = item.get_content().decode("utf-8", errors="ignore")
             soup = BeautifulSoup(html, "lxml")
 
@@ -86,7 +124,6 @@ class EpubParser(BookParser):
                 if not text_with_ph.strip():
                     continue
 
-                # Проверка на служебные фразы Gutenberg
                 if self._has_boilerplate_phrase(text_with_ph):
                     continue
 
@@ -110,9 +147,15 @@ class EpubParser(BookParser):
             },
         )
 
+    def _is_boilerplate_file(self, filename: str) -> bool:
+        """Пропускает файлы с служебными именами."""
+        lower = filename.lower()
+        for kw in BOILERPLATE_FILENAMES_KEYWORDS:
+            if kw in lower:
+                return True
+        return False
+
     def _is_boilerplate(self, block) -> bool:
-        """Проверяет, является ли блок служебным."""
-        # Классы самого блока
         classes = block.get("class") or []
         if isinstance(classes, str):
             classes = [classes]
@@ -120,12 +163,10 @@ class EpubParser(BookParser):
             if cls in BOILERPLATE_CLASSES:
                 return True
 
-        # ID самого блока
         block_id = block.get("id") or ""
         if block_id.startswith(("pg-footer", "pg-header")):
             return True
 
-        # Проверяем родителей
         for parent in block.parents:
             parent_classes = parent.get("class") or []
             if isinstance(parent_classes, str):
@@ -140,7 +181,6 @@ class EpubParser(BookParser):
         return False
 
     def _has_boilerplate_phrase(self, text: str) -> bool:
-        """Проверяет, содержит ли текст служебную фразу Gutenberg."""
         upper = text.upper()
         for phrase in BOILERPLATE_PHRASES:
             if phrase.upper() in upper:
