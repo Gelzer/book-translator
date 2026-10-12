@@ -1,4 +1,4 @@
-"""Собирает EPUB с переводом, сохраняя вёрстку."""
+"""Собирает EPUB с переводом, сохраняя вёрстку идеально."""
 import os
 import re
 import zipfile
@@ -21,10 +21,24 @@ SKIP_FILES = {
     "nav.xhtml",
 }
 
+# Убираем оставшиеся плейсхолдеры (если LLM что-то сломала)
 LEFTOVER_PLACEHOLDER = re.compile(r"⟦[^⟧]*⟧")
-MARKDOWN_HASH_PREFIX = re.compile(r"^\s*#{1,6}\s+")
 
+# Markdown-очистка (умная):
+# 1. # или ## или ### В НАЧАЛЕ СТРОКИ, за которыми идёт пробел → это заголовок, убираем решётки
+MARKDOWN_HASH = re.compile(r"(?m)^\s*#{1,6}\s+")
+# 2. **text** или __text__ — убираем обёртку, оставляем текст (только если внутри нет * или _)
+MARKDOWN_BOLD = re.compile(r"\*{2}([^*\n]+?)\*{2}|__([^_\n]+?)__")
+# 3. Одиночные * или _ в начале строки (markdown списки) — убираем
+MARKDOWN_ITALIC_LINE = re.compile(r"(?m)^\s*[\*_]\s+")
+# 4. Inline одинарные * или _ вокруг слова (только если буква внутри, чтобы не трогать ***)
+MARKDOWN_ITALIC_INLINE = re.compile(r"(?<!\*)\*(?!\*)([^*\n]{2,}?)(?<!\*)\*(?!\*)")
+
+# Длинный h1-h6 → превращаем в p
 MAX_HEADING_LENGTH = 100
+
+# Схлопываем множественные пробелы (кроме переносов строк)
+MULTIPLE_SPACES = re.compile(r"[ \t]{2,}")
 
 
 def _is_content_html(filename: str) -> bool:
@@ -39,6 +53,31 @@ def _is_content_html(filename: str) -> bool:
     if base in ("nav.xhtml", "toc.xhtml", "toc.ncx"):
         return False
     return True
+
+
+def _clean_markdown(text: str) -> str:
+    """Убирает markdown-разметку, добавленную LLM. НЕ трогает *** в начале строки."""
+    # Не трогаем, если это целиком *** Gutenberg *** — тут ничего не делаем
+    stripped = text.strip()
+    if stripped.startswith("***") and stripped.endswith("***") and len(stripped) < 200:
+        return text
+
+    # 1. Убираем ** text ** и __ text __
+    text = MARKDOWN_BOLD.sub(lambda m: m.group(1) or m.group(2), text)
+
+    # 2. Убираем # в начале строк
+    text = MARKDOWN_HASH.sub("", text)
+
+    # 3. Убираем markdown-списки (* item, _ item)
+    text = MARKDOWN_ITALIC_LINE.sub("", text)
+
+    # 4. Убираем inline курсив (только если это НЕ ***)
+    text = MARKDOWN_ITALIC_INLINE.sub(r"\1", text)
+
+    # 5. Схлопываем множественные пробелы
+    text = MULTIPLE_SPACES.sub(" ", text)
+
+    return text.strip()
 
 
 def build_translated_epub(
@@ -122,13 +161,13 @@ def _process_html(html: str, file_key: str, translations: dict) -> Tuple[str, di
         # Убираем оставшиеся плейсхолдеры
         translated_html = LEFTOVER_PLACEHOLDER.sub("", translated_html)
 
-        # Убираем markdown-решётки в начале
-        translated_html = MARKDOWN_HASH_PREFIX.sub("", translated_html)
+        # Убираем markdown-разметку, добавленную LLM
+        translated_html = _clean_markdown(translated_html)
 
         tag_name = block.name
         tag_attrs = dict(block.attrs)
 
-        # Длинный h1-h6 → превращаем в p
+        # ФИКС: длинный h1-h6 → превращаем в p (это не заголовок, а абзац)
         if tag_name in ("h1", "h2", "h3", "h4", "h5", "h6"):
             if len(translated_html) > MAX_HEADING_LENGTH:
                 tag_name = "p"
