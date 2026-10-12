@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from config import settings
 from app.parsers.epub_parser import parse_epub
 from app.translators.genapi_client import (
-    translate_text, translate_batch, review_batch, detect_narrator_gender,
+    translate_text, translate_batch, detect_narrator_gender,
 )
 from app.placeholders.restorer import restore_placeholders
 from app.builders.epub_builder import build_translated_epub
@@ -23,10 +23,6 @@ BATCH_SIZE = 5
 KEY_PREVIEW = 0
 KEY_FULL_BOOK = 1
 
-
-# ============================================================
-# ЗАГРУЗКА
-# ============================================================
 
 @router.post("/upload")
 async def preview_upload(file: UploadFile = File(...)):
@@ -65,10 +61,6 @@ async def preview_upload(file: UploadFile = File(...)):
         )
 
 
-# ============================================================
-# ПРЕВЬЮ
-# ============================================================
-
 @router.post("/translate")
 async def preview_translate(job_id: str = Form(...)):
     job = await job_store.get(job_id)
@@ -87,7 +79,6 @@ async def preview_translate(job_id: str = Form(...)):
             content={"status": "error", "message": "В книге нет текста для перевода"},
         )
 
-    # Определяем пол рассказчика
     sample_text = "\n".join(s.text for s in segments_to_translate[:10])
     gender = detect_narrator_gender(sample_text)
 
@@ -124,10 +115,6 @@ async def preview_translate(job_id: str = Form(...)):
     }
 
 
-# ============================================================
-# ПОЛНЫЙ ПЕРЕВОД (фоновая задача)
-# ============================================================
-
 async def _translate_book_background(job_id: str) -> None:
     try:
         job = await job_store.get(job_id)
@@ -144,15 +131,15 @@ async def _translate_book_background(job_id: str) -> None:
         total = len(segments)
         translations_map = {}
 
-        # ============ ФАЗА 0: ОПРЕДЕЛЕНИЕ ПОЛА РАССКАЗЧИКА ============
         await job_store.update_status(job_id, "translating")
         await job_store.update_progress(job_id, 0)
 
+        # Определяем пол рассказчика
         sample_text = "\n".join(s.text for s in segments[:10])
         gender = detect_narrator_gender(sample_text)
         print(f"=== Narrator gender: {gender} ===")
 
-        # ============ ФАЗА 1: ОСНОВНОЙ ПЕРЕВОД ============
+        # Переводим всё без QA
         for i in range(0, total, BATCH_SIZE):
             batch_segs = segments[i:i + BATCH_SIZE]
             batch_input = [(s.id, s.text) for s in batch_segs]
@@ -195,41 +182,7 @@ async def _translate_book_background(job_id: str) -> None:
 
             await job_store.update_progress(job_id, min(i + BATCH_SIZE, total))
 
-        # ============ ФАЗА 2: QA (ТОЛЬКО АНГЛИЙСКИЕ СЛОВА) ============
-        await job_store.update_status(job_id, "reviewing")
-        await job_store.update_progress(job_id, 0)
-
-        reviewed_map = {}
-
-        for i in range(0, total, BATCH_SIZE):
-            batch_segs = segments[i:i + BATCH_SIZE]
-
-            qa_input = []
-            for seg in batch_segs:
-                if seg.id in translations_map:
-                    qa_input.append((seg.id, translations_map[seg.id]))
-
-            if not qa_input:
-                continue
-
-            if settings.MOCK_TRANSLATION:
-                await asyncio.sleep(0.2)
-
-            try:
-                result = review_batch(qa_input)
-                reviewed_map.update(result)
-
-                missing = {sid for sid, _ in qa_input} - set(result.keys())
-                for seg_id in missing:
-                    reviewed_map[seg_id] = translations_map[seg_id]
-            except Exception:
-                for seg_id, text in qa_input:
-                    reviewed_map[seg_id] = text
-
-            await job_store.update_progress(job_id, min(i + BATCH_SIZE, total))
-
-        # ============ СОХРАНЕНИЕ ============
-        await job_store.save_translation(job_id, KEY_FULL_BOOK, reviewed_map)
+        await job_store.save_translation(job_id, KEY_FULL_BOOK, translations_map)
         await job_store.update_status(job_id, "done")
 
         try:
@@ -264,7 +217,7 @@ async def preview_translate_full(
             content={"status": "error", "message": "job_id не найден"},
         )
 
-    if job["status"] == "translating" or job["status"] == "reviewing":
+    if job["status"] == "translating":
         return {
             "status": "ok",
             "message": "Перевод уже идёт",
@@ -332,10 +285,6 @@ async def preview_set_email(
     return {"status": "ok", "message": "Email сохранён"}
 
 
-# ============================================================
-# СКАЧИВАНИЕ
-# ============================================================
-
 @router.post("/download")
 async def preview_download(job_id: str = Form(...)):
     job = await job_store.get(job_id)
@@ -385,10 +334,6 @@ async def preview_download(job_id: str = Form(...)):
         filename=f"translated_{job['filename']}",
     )
 
-
-# ============================================================
-# ЮKASSA
-# ============================================================
 
 @router.post("/create-payment")
 async def create_payment(job_id: str = Form(...)):
@@ -461,10 +406,6 @@ async def verify_payment(job_id: str = Form(...)):
     }
 
 
-# ============================================================
-# СТРАНИЦА JOB
-# ============================================================
-
 from fastapi.responses import HTMLResponse
 
 
@@ -506,9 +447,8 @@ async def job_page(job_id: str):
         """
     else:
         pct = int((progress / total * 100) if total > 0 else 0)
-        phase = "Проверка перевода (QA)" if status == "reviewing" else "Перевод книги"
         body = f"""
-        <h1 style="color:#7a1f4a;">⏳ {phase}…</h1>
+        <h1 style="color:#7a1f4a;">⏳ Перевод книги…</h1>
         <p>{progress} / {total} ({pct}%)</p>
         <div style="height:10px;background:#f0f0f0;border-radius:100px;overflow:hidden;margin:20px 0;">
             <div style="height:100%;background:#7a1f4a;width:{pct}%;"></div>
@@ -526,10 +466,6 @@ async def job_page(job_id: str):
     """
     return HTMLResponse(content=html)
 
-
-# ============================================================
-# ВСПОМОГАТЕЛЬНОЕ
-# ============================================================
 
 async def _translate_segments(segments, source_lang: str, gender: str | None = None):
     batch_input = [(seg.id, seg.text) for seg in segments]
@@ -574,7 +510,6 @@ async def _translate_segments(segments, source_lang: str, gender: str | None = N
     return translations_map, errors
 
 
-# Импорт для отправки email (в конце файла — чтобы не было циклической зависимости)
 try:
     from app.utils.mailer import send_translation_ready
 except ImportError:
