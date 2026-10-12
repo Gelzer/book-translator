@@ -1,6 +1,7 @@
 """
 Парсер EPUB. Извлекает текстовые сегменты с сохранением вёрстки.
 """
+import re
 from pathlib import Path
 from typing import List
 
@@ -14,7 +15,7 @@ from app.placeholders.extractor import extract_placeholders
 
 BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "li", "div"]
 
-# Классы служебных блоков Project Gutenberg — их не переводим
+# Служебные классы Project Gutenberg — не переводим
 BOILERPLATE_CLASSES = {
     "pg-boilerplate",
     "pgheader",
@@ -23,10 +24,19 @@ BOILERPLATE_CLASSES = {
     "pg-footer",
     "transcriber",
     "transcriber-notes",
+    "pgtranscriber",
 }
 
-# Заголовки h1-h6 длиннее этого числа символов — это НЕ заголовок, а абзац
-MAX_HEADING_LENGTH = 100
+# Служебные фразы — если сегмент содержит их, пропускаем
+BOILERPLATE_PHRASES = [
+    "START OF THE PROJECT GUTENBERG",
+    "END OF THE PROJECT GUTENBERG",
+    "START OF THIS PROJECT GUTENBERG",
+    "END OF THIS PROJECT GUTENBERG",
+    "Transcriber's Notes",
+    "Transcriber’s Notes",
+    "Most recently updated:",
+]
 
 
 class EpubParser(BookParser):
@@ -58,11 +68,9 @@ class EpubParser(BookParser):
             order = 0
 
             for block in soup.find_all(BLOCK_TAGS):
-                # Пропускаем контейнеры с вложенными блочными тегами
                 if block.find(BLOCK_TAGS):
                     continue
 
-                # Пропускаем служебные блоки Gutenberg
                 if self._is_boilerplate(block):
                     continue
 
@@ -70,13 +78,16 @@ class EpubParser(BookParser):
                 if not inner_html:
                     continue
 
-                # ФИЛЬТР: короткие div-ы со служебным классом/id — это мусор.
                 if block.name == "div" and len(inner_html) < 30 and (block.get("class") or block.get("id")):
                     continue
 
                 text_with_ph, mapping = extract_placeholders(inner_html)
 
                 if not text_with_ph.strip():
+                    continue
+
+                # Проверка на служебные фразы Gutenberg
+                if self._has_boilerplate_phrase(text_with_ph):
                     continue
 
                 segments.append(TextSegment(
@@ -100,8 +111,8 @@ class EpubParser(BookParser):
         )
 
     def _is_boilerplate(self, block) -> bool:
-        """Проверяет, является ли блок служебным (Project Gutenberg boilerplate)."""
-        # Проверяем классы
+        """Проверяет, является ли блок служебным."""
+        # Классы самого блока
         classes = block.get("class") or []
         if isinstance(classes, str):
             classes = [classes]
@@ -109,12 +120,12 @@ class EpubParser(BookParser):
             if cls in BOILERPLATE_CLASSES:
                 return True
 
-        # Проверяем id
+        # ID самого блока
         block_id = block.get("id") or ""
         if block_id.startswith(("pg-footer", "pg-header")):
             return True
 
-        # Проверяем родителей — если внутри header.pg-boilerplate или div.pgfooter
+        # Проверяем родителей
         for parent in block.parents:
             parent_classes = parent.get("class") or []
             if isinstance(parent_classes, str):
@@ -126,6 +137,14 @@ class EpubParser(BookParser):
             if parent_id.startswith(("pg-footer", "pg-header")):
                 return True
 
+        return False
+
+    def _has_boilerplate_phrase(self, text: str) -> bool:
+        """Проверяет, содержит ли текст служебную фразу Gutenberg."""
+        upper = text.upper()
+        for phrase in BOILERPLATE_PHRASES:
+            if phrase.upper() in upper:
+                return True
         return False
 
     @staticmethod
