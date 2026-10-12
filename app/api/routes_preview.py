@@ -4,13 +4,11 @@ import shutil
 from datetime import datetime
 
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 
 from config import settings
 from app.parsers.epub_parser import parse_epub
-from app.translators.genapi_client import (
-    translate_text, translate_batch, detect_narrator_gender,
-)
+from app.translators.genapi_client import translate_text, translate_batch
 from app.placeholders.restorer import restore_placeholders
 from app.builders.epub_builder import build_translated_epub
 from app.core.session import job_store
@@ -79,11 +77,8 @@ async def preview_translate(job_id: str = Form(...)):
             content={"status": "error", "message": "В книге нет текста для перевода"},
         )
 
-    sample_text = "\n".join(s.text for s in segments_to_translate[:10])
-    gender = detect_narrator_gender(sample_text)
-
     translations_map, errors = await _translate_segments(
-        segments_to_translate, book.language, gender
+        segments_to_translate, book.language
     )
 
     results = []
@@ -134,12 +129,6 @@ async def _translate_book_background(job_id: str) -> None:
         await job_store.update_status(job_id, "translating")
         await job_store.update_progress(job_id, 0)
 
-        # Определяем пол рассказчика
-        sample_text = "\n".join(s.text for s in segments[:10])
-        gender = detect_narrator_gender(sample_text)
-        print(f"=== Narrator gender: {gender} ===")
-
-        # Переводим всё без QA
         for i in range(0, total, BATCH_SIZE):
             batch_segs = segments[i:i + BATCH_SIZE]
             batch_input = [(s.id, s.text) for s in batch_segs]
@@ -152,7 +141,6 @@ async def _translate_book_background(job_id: str) -> None:
                     batch_input,
                     source_lang=book.language,
                     target_lang="ru",
-                    gender=gender,
                 )
                 translations_map.update(result)
 
@@ -164,7 +152,6 @@ async def _translate_book_background(job_id: str) -> None:
                     try:
                         translated = translate_text(
                             text, source_lang=book.language, target_lang="ru",
-                            gender=gender,
                         )
                         translations_map[seg_id] = translated
                     except Exception:
@@ -174,7 +161,6 @@ async def _translate_book_background(job_id: str) -> None:
                     try:
                         translated = translate_text(
                             text, source_lang=book.language, target_lang="ru",
-                            gender=gender,
                         )
                         translations_map[seg_id] = translated
                     except Exception:
@@ -406,9 +392,6 @@ async def verify_payment(job_id: str = Form(...)):
     }
 
 
-from fastapi.responses import HTMLResponse
-
-
 @router.get("/job/{job_id}", response_class=HTMLResponse)
 async def job_page(job_id: str):
     job = await job_store.get(job_id)
@@ -467,7 +450,7 @@ async def job_page(job_id: str):
     return HTMLResponse(content=html)
 
 
-async def _translate_segments(segments, source_lang: str, gender: str | None = None):
+async def _translate_segments(segments, source_lang: str):
     batch_input = [(seg.id, seg.text) for seg in segments]
     batches = [
         batch_input[i:i + BATCH_SIZE]
@@ -481,7 +464,7 @@ async def _translate_segments(segments, source_lang: str, gender: str | None = N
         expected_ids = {seg_id for seg_id, _ in batch}
         try:
             result = translate_batch(
-                batch, source_lang=source_lang, target_lang="ru", gender=gender,
+                batch, source_lang=source_lang, target_lang="ru",
             )
             translations_map.update(result)
 
@@ -492,7 +475,7 @@ async def _translate_segments(segments, source_lang: str, gender: str | None = N
                     continue
                 try:
                     translated = translate_text(
-                        text, source_lang=source_lang, target_lang="ru", gender=gender,
+                        text, source_lang=source_lang, target_lang="ru",
                     )
                     translations_map[seg_id] = translated
                 except Exception as e2:
@@ -501,7 +484,7 @@ async def _translate_segments(segments, source_lang: str, gender: str | None = N
             for seg_id, text in batch:
                 try:
                     translated = translate_text(
-                        text, source_lang=source_lang, target_lang="ru", gender=gender,
+                        text, source_lang=source_lang, target_lang="ru",
                     )
                     translations_map[seg_id] = translated
                 except Exception as e2:
