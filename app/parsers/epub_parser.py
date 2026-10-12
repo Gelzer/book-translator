@@ -1,5 +1,6 @@
 """
 Парсер EPUB. Извлекает текстовые сегменты с сохранением вёрстки.
+Универсальный — работает с любыми EPUB.
 """
 from pathlib import Path
 from typing import List
@@ -52,7 +53,7 @@ class EpubParser(BookParser):
                 if not inner_html:
                     continue
 
-                # Пропускаем короткие служебные div-ы (пустые обёртки)
+                # Пропускаем короткие div-обёртки без текста
                 if block.name == "div" and len(inner_html) < 30 and (block.get("class") or block.get("id")):
                     continue
 
