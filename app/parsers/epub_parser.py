@@ -1,6 +1,5 @@
 """
 Парсер EPUB. Извлекает текстовые сегменты с сохранением вёрстки.
-Универсальный — работает с любыми EPUB.
 """
 from pathlib import Path
 from typing import List
