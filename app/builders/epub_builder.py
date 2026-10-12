@@ -22,8 +22,8 @@ SKIP_FILES = {
 }
 
 LEFTOVER_PLACEHOLDER = re.compile(r"⟦[^⟧]*⟧")
+MARKDOWN_HASH_PREFIX = re.compile(r"^\s*#{1,6}\s+")
 
-# Заголовки длиннее этого числа символов — это не заголовок, а абзац.
 MAX_HEADING_LENGTH = 100
 
 
@@ -122,11 +122,13 @@ def _process_html(html: str, file_key: str, translations: dict) -> Tuple[str, di
         # Убираем оставшиеся плейсхолдеры
         translated_html = LEFTOVER_PLACEHOLDER.sub("", translated_html)
 
+        # Убираем markdown-решётки в начале (LLM иногда добавляет)
+        translated_html = MARKDOWN_HASH_PREFIX.sub("", translated_html)
+
         tag_name = block.name
         tag_attrs = dict(block.attrs)
 
-        # ФИКС: если h1-h6 содержит длинный текст — это не заголовок, а абзац.
-        # Конвертируем в <p>, чтобы вёрстка не ломалась.
+        # Длинный h1-h6 → превращаем в p
         if tag_name in ("h1", "h2", "h3", "h4", "h5", "h6"):
             if len(translated_html) > MAX_HEADING_LENGTH:
                 tag_name = "p"
