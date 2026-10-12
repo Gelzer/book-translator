@@ -3,13 +3,12 @@ import httpx
 
 from config import settings
 from app.translators.prompts import (
-    GENDER_DETECT_PROMPT,
-    build_system_prompt,
-    build_batch_system_prompt,
+    SYSTEM_PROMPT,
+    BATCH_SYSTEM_PROMPT,
     build_user_prompt,
     build_batch_prompt,
     parse_batch_response,
-    BASE_GLOSSARY,
+    GLOSSARY,
 )
 
 
@@ -60,28 +59,6 @@ class GenAPIClient:
         except (KeyError, IndexError) as e:
             raise RuntimeError(f"Неожиданный ответ от GenAPI: {data}") from e
 
-    def detect_narrator_gender(self, sample_text: str) -> str:
-        """Определяет пол рассказчика. Возвращает 'male', 'female' или 'unknown'."""
-        if settings.MOCK_TRANSLATION:
-            return "male"
-
-        try:
-            raw = self._chat(
-                GENDER_DETECT_PROMPT,
-                sample_text[:3000],
-                temperature=0.0,
-                max_tokens=20,
-            )
-        except Exception:
-            return "unknown"
-
-        raw_lower = raw.lower()
-        if "female" in raw_lower:
-            return "female"
-        if "male" in raw_lower:
-            return "male"
-        return "unknown"
-
     def translate(
         self,
         text: str,
@@ -89,13 +66,11 @@ class GenAPIClient:
         target_lang: str = "ru",
         temperature: float = 0.3,
         glossary: dict | None = None,
-        gender: str | None = None,
     ) -> str:
         if settings.MOCK_TRANSLATION:
             return f"[ТЕСТ] {text[:120]}..."
         user = build_user_prompt(text, source_lang, target_lang, glossary)
-        system = build_system_prompt(gender)
-        return self._chat(system, user, temperature)
+        return self._chat(SYSTEM_PROMPT, user, temperature)
 
     def translate_batch(
         self,
@@ -104,21 +79,15 @@ class GenAPIClient:
         target_lang: str = "ru",
         temperature: float = 0.3,
         glossary: dict | None = None,
-        gender: str | None = None,
     ) -> dict:
         if settings.MOCK_TRANSLATION:
             return {seg_id: f"[ТЕСТ] {text[:120]}..." for seg_id, text in segments}
         user = build_batch_prompt(segments, source_lang, target_lang, glossary)
-        system = build_batch_system_prompt(gender)
-        raw = self._chat(system, user, temperature, max_tokens=4000)
+        raw = self._chat(BATCH_SYSTEM_PROMPT, user, temperature, max_tokens=4000)
         return parse_batch_response(raw)
 
 
 client = GenAPIClient()
-
-
-def detect_narrator_gender(sample_text: str) -> str:
-    return client.detect_narrator_gender(sample_text)
 
 
 def translate_text(
@@ -126,11 +95,10 @@ def translate_text(
     source_lang: str = "en",
     target_lang: str = "ru",
     glossary: dict | None = None,
-    gender: str | None = None,
 ) -> str:
     if glossary is None:
-        glossary = BASE_GLOSSARY
-    return client.translate(text, source_lang, target_lang, glossary=glossary, gender=gender)
+        glossary = GLOSSARY
+    return client.translate(text, source_lang, target_lang, glossary=glossary)
 
 
 def translate_batch(
@@ -138,8 +106,7 @@ def translate_batch(
     source_lang: str = "en",
     target_lang: str = "ru",
     glossary: dict | None = None,
-    gender: str | None = None,
 ) -> dict:
     if glossary is None:
-        glossary = BASE_GLOSSARY
-    return client.translate_batch(segments, source_lang, target_lang, glossary=glossary, gender=gender)
+        glossary = GLOSSARY
+    return client.translate_batch(segments, source_lang, target_lang, glossary=glossary)
