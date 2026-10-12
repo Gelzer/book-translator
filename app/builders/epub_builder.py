@@ -1,7 +1,4 @@
-"""Собирает EPUB с переводом, сохраняя вёрстку.
-
-Работает с EPUB как с ZIP-архивом напрямую — не через ebooklib.
-"""
+"""Собирает EPUB с переводом, сохраняя вёрстку."""
 import os
 import re
 import zipfile
@@ -24,8 +21,10 @@ SKIP_FILES = {
     "nav.xhtml",
 }
 
-# Паттерн для удаления оставшихся плейсхолдеров
 LEFTOVER_PLACEHOLDER = re.compile(r"⟦[^⟧]*⟧")
+
+# Заголовки длиннее этого числа символов — это не заголовок, а абзац.
+MAX_HEADING_LENGTH = 100
 
 
 def _is_content_html(filename: str) -> bool:
@@ -120,11 +119,17 @@ def _process_html(html: str, file_key: str, translations: dict) -> Tuple[str, di
 
         translated_html = restore_placeholders(translations[seg_id], mapping)
 
-        # Убираем оставшиеся плейсхолдеры, если что-то не восстановилось
+        # Убираем оставшиеся плейсхолдеры
         translated_html = LEFTOVER_PLACEHOLDER.sub("", translated_html)
 
         tag_name = block.name
         tag_attrs = dict(block.attrs)
+
+        # ФИКС: если h1-h6 содержит длинный текст — это не заголовок, а абзац.
+        # Конвертируем в <p>, чтобы вёрстка не ломалась.
+        if tag_name in ("h1", "h2", "h3", "h4", "h5", "h6"):
+            if len(translated_html) > MAX_HEADING_LENGTH:
+                tag_name = "p"
 
         wrapper = BeautifulSoup(
             f"<{tag_name}>{translated_html}</{tag_name}>",
