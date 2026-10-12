@@ -14,6 +14,20 @@ from app.placeholders.extractor import extract_placeholders
 
 BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "li", "div"]
 
+# Классы служебных блоков Project Gutenberg — их не переводим
+BOILERPLATE_CLASSES = {
+    "pg-boilerplate",
+    "pgheader",
+    "pgfooter",
+    "pg-header",
+    "pg-footer",
+    "transcriber",
+    "transcriber-notes",
+}
+
+# Заголовки h1-h6 длиннее этого числа символов — это НЕ заголовок, а абзац
+MAX_HEADING_LENGTH = 100
+
 
 class EpubParser(BookParser):
     """Парсер EPUB-файлов."""
@@ -48,12 +62,15 @@ class EpubParser(BookParser):
                 if block.find(BLOCK_TAGS):
                     continue
 
+                # Пропускаем служебные блоки Gutenberg
+                if self._is_boilerplate(block):
+                    continue
+
                 inner_html = block.decode_contents().strip()
                 if not inner_html:
                     continue
 
                 # ФИЛЬТР: короткие div-ы со служебным классом/id — это мусор.
-                # Короткие div-ы БЕЗ класса — смысловой текст, переводим.
                 if block.name == "div" and len(inner_html) < 30 and (block.get("class") or block.get("id")):
                     continue
 
@@ -81,6 +98,35 @@ class EpubParser(BookParser):
                 "total_segments": len(segments),
             },
         )
+
+    def _is_boilerplate(self, block) -> bool:
+        """Проверяет, является ли блок служебным (Project Gutenberg boilerplate)."""
+        # Проверяем классы
+        classes = block.get("class") or []
+        if isinstance(classes, str):
+            classes = [classes]
+        for cls in classes:
+            if cls in BOILERPLATE_CLASSES:
+                return True
+
+        # Проверяем id
+        block_id = block.get("id") or ""
+        if block_id.startswith(("pg-footer", "pg-header")):
+            return True
+
+        # Проверяем родителей — если внутри header.pg-boilerplate или div.pgfooter
+        for parent in block.parents:
+            parent_classes = parent.get("class") or []
+            if isinstance(parent_classes, str):
+                parent_classes = [parent_classes]
+            for cls in parent_classes:
+                if cls in BOILERPLATE_CLASSES:
+                    return True
+            parent_id = parent.get("id") or ""
+            if parent_id.startswith(("pg-footer", "pg-header")):
+                return True
+
+        return False
 
     @staticmethod
     def _get_meta(book: epub.EpubBook, field: str) -> str:
