@@ -4,12 +4,10 @@ import httpx
 from config import settings
 from app.translators.prompts import (
     GENDER_DETECT_PROMPT,
-    QA_SYSTEM_PROMPT,
     build_system_prompt,
     build_batch_system_prompt,
     build_user_prompt,
     build_batch_prompt,
-    build_qa_prompt,
     parse_batch_response,
     BASE_GLOSSARY,
 )
@@ -63,10 +61,7 @@ class GenAPIClient:
             raise RuntimeError(f"Неожиданный ответ от GenAPI: {data}") from e
 
     def detect_narrator_gender(self, sample_text: str) -> str:
-        """
-        Определяет пол рассказчика по фрагменту текста.
-        Возвращает 'male', 'female' или 'unknown'.
-        """
+        """Определяет пол рассказчика. Возвращает 'male', 'female' или 'unknown'."""
         if settings.MOCK_TRANSLATION:
             return "male"
 
@@ -118,18 +113,6 @@ class GenAPIClient:
         raw = self._chat(system, user, temperature, max_tokens=4000)
         return parse_batch_response(raw)
 
-    def review_batch(
-        self,
-        segments: list[tuple[str, str]],
-        temperature: float = 0.1,
-    ) -> dict:
-        """QA-проход: только замена английских слов на русские."""
-        if settings.MOCK_TRANSLATION:
-            return {seg_id: text for seg_id, text in segments}
-        user = build_qa_prompt(segments)
-        raw = self._chat(QA_SYSTEM_PROMPT, user, temperature, max_tokens=4000)
-        return parse_batch_response(raw)
-
 
 client = GenAPIClient()
 
@@ -160,7 +143,3 @@ def translate_batch(
     if glossary is None:
         glossary = BASE_GLOSSARY
     return client.translate_batch(segments, source_lang, target_lang, glossary=glossary, gender=gender)
-
-
-def review_batch(segments: list[tuple[str, str]]) -> dict:
-    return client.review_batch(segments)
