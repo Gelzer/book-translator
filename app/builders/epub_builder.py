@@ -1,9 +1,9 @@
 """Собирает EPUB с переводом, сохраняя вёрстку.
 
 Работает с EPUB как с ZIP-архивом напрямую — не через ebooklib.
-Это единственный способ сохранить оригинальные <head>, <?xml?>, DOCTYPE и все атрибуты.
 """
 import os
+import re
 import zipfile
 from pathlib import Path
 from typing import Tuple
@@ -24,9 +24,11 @@ SKIP_FILES = {
     "nav.xhtml",
 }
 
+# Паттерн для удаления оставшихся плейсхолдеров
+LEFTOVER_PLACEHOLDER = re.compile(r"⟦[^⟧]*⟧")
+
 
 def _is_content_html(filename: str) -> bool:
-    """Является ли файл XHTML-контентом (а не служебным)."""
     lower = filename.lower()
     if not (lower.endswith(".xhtml") or lower.endswith(".html") or lower.endswith(".htm")):
         return False
@@ -45,13 +47,6 @@ def build_translated_epub(
     output_path: str,
     translations: dict,
 ) -> Tuple[str, int]:
-    """
-    Собирает EPUB с переводом.
-    1. Открывает исходный EPUB как ZIP
-    2. Для каждого XHTML-файла применяет замену блоков
-    3. Копирует всё остальное (картинки, CSS, метаданные) без изменений
-    4. Пишет новый ZIP
-    """
     src = Path(source_path)
     out = Path(output_path)
 
@@ -61,18 +56,15 @@ def build_translated_epub(
     replaced_count = 0
     files_to_write = []
 
-    # Читаем исходный архив
     with zipfile.ZipFile(src, "r") as zin:
         for entry in zin.infolist():
             filename = entry.filename
             data = zin.read(filename)
 
-            # mimetype — без сжатия, как требует спецификация EPUB
             if filename == "mimetype":
                 files_to_write.append((entry, data, zipfile.ZIP_STORED))
                 continue
 
-            # XHTML-контент — модифицируем
             if _is_content_html(filename):
                 try:
                     html = data.decode("utf-8", errors="ignore")
@@ -88,13 +80,10 @@ def build_translated_epub(
                         (entry, modified_html.encode("utf-8"), zipfile.ZIP_DEFLATED)
                     )
                 except Exception:
-                    # Если что-то пошло не так — пишем оригинал без изменений
                     files_to_write.append((entry, data, zipfile.ZIP_DEFLATED))
             else:
-                # Всё остальное (картинки, CSS, opf, ncx) — как есть
                 files_to_write.append((entry, data, zipfile.ZIP_DEFLATED))
 
-    # Пишем новый архив
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zout:
         for entry, data, compress_type in files_to_write:
             new_entry = zipfile.ZipInfo(entry.filename, date_time=entry.date_time)
@@ -106,10 +95,6 @@ def build_translated_epub(
 
 
 def _process_html(html: str, file_key: str, translations: dict) -> Tuple[str, dict]:
-    """
-    Обрабатывает один XHTML-файл.
-    Использует file_key вместо chapter_num — так парсер и сборщик гарантированно совпадают.
-    """
     soup = BeautifulSoup(html, "html.parser")
 
     order = 0
@@ -134,6 +119,9 @@ def _process_html(html: str, file_key: str, translations: dict) -> Tuple[str, di
             continue
 
         translated_html = restore_placeholders(translations[seg_id], mapping)
+
+        # Убираем оставшиеся плейсхолдеры, если что-то не восстановилось
+        translated_html = LEFTOVER_PLACEHOLDER.sub("", translated_html)
 
         tag_name = block.name
         tag_attrs = dict(block.attrs)
