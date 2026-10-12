@@ -22,7 +22,7 @@ class Settings:
     YOOKASSA_SHOP_ID: str = os.getenv("YOOKASSA_SHOP_ID", "")
     YOOKASSA_SECRET_KEY: str = os.getenv("YOOKASSA_SECRET_KEY", "")
     YOOKASSA_RETURN_URL: str = os.getenv("YOOKASSA_RETURN_URL", "http://localhost:8000/ui/")
-    BOOK_PRICE_RUB: int = int(os.getenv("BOOK_PRICE_RUB", "990"))
+    BOOK_PRICE_RUB: int = int(os.getenv("BOOK_PRICE_RUB", "500"))
 
     # --- Email (Resend) ---
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
