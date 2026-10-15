@@ -3,7 +3,7 @@ import shutil
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Query, UploadFile, File
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import settings
@@ -48,13 +48,7 @@ async def privacy_page():
 
 @app.get("/")
 async def root():
-    return {
-        "status": "ok",
-        "message": "Book Translator API работает",
-        "model": settings.GENAPI_MODEL,
-        "ui": "/ui/",
-        "docs": "/docs",
-    }
+    return RedirectResponse(url="/ui/")
 
 
 @app.get("/health")
