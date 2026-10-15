@@ -3,7 +3,7 @@ import shutil
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Query, UploadFile, File
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import settings
@@ -34,6 +34,16 @@ app.include_router(feedback_router)
 
 # Подключаем статику (UI)
 app.mount("/ui", StaticFiles(directory="static", html=True), name="ui")
+
+from fastapi.responses import FileResponse
+
+@app.get("/offer")
+async def offer_page():
+    return FileResponse("static/offer.html")
+
+@app.get("/privacy")
+async def privacy_page():
+    return FileResponse("static/privacy.html")
 
 
 @app.get("/")
