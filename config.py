@@ -1,108 +1,49 @@
-"""Точка входа. Запускает FastAPI-сервер."""
-import shutil
-from contextlib import asynccontextmanager
+"""Читает переменные из .env и отдаёт их остальному коду."""
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-from fastapi import FastAPI, Query, UploadFile, File
-from fastapi.responses import JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
-
-from config import settings
-from app.translators.genapi_client import translate_text
-from app.parsers.epub_parser import parse_epub
-from app.api.routes_preview import router as preview_router
-from app.api.routes_feedback import router as feedback_router
-from app.core.session import job_store
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
 
-@asynccontextmanager
-async def lifespan(app):
-    """Инициализация при старте приложения."""
-    await job_store.init()
-    yield
+class Settings:
+    # --- GenAPI ---
+    GENAPI_API_KEY: str = os.getenv("GENAPI_API_KEY", "")
+    GENAPI_BASE_URL: str = os.getenv("GENAPI_BASE_URL", "https://api.gen-api.ru/v1")
+    GENAPI_MODEL: str = os.getenv("GENAPI_MODEL", "gpt-4o-mini")
+    MOCK_TRANSLATION: bool = os.getenv("MOCK_TRANSLATION", "false").lower() == "true"
+
+    # --- Telegram ---
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
+
+    # --- ЮKassa ---
+    YOOKASSA_SHOP_ID: str = os.getenv("YOOKASSA_SHOP_ID", "")
+    YOOKASSA_SECRET_KEY: str = os.getenv("YOOKASSA_SECRET_KEY", "")
+    YOOKASSA_RETURN_URL: str = os.getenv("YOOKASSA_RETURN_URL", "http://localhost:8000/ui/")
+    BOOK_PRICE_RUB: int = int(os.getenv("BOOK_PRICE_RUB", "500"))
+
+    # --- Email (Resend) ---
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "Book Translator <onboarding@resend.dev>")
+    PUBLIC_URL: str = os.getenv("PUBLIC_URL", "http://localhost:8000")
+
+    # --- Сервер ---
+    HOST: str = os.getenv("HOST", "0.0.0.0")
+    PORT: int = int(os.getenv("PORT", "8000"))
+    DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
+
+    # --- Файлы ---
+    STORAGE_UPLOADS: Path = BASE_DIR / os.getenv("STORAGE_UPLOADS", "storage/uploads")
+    STORAGE_OUTPUTS: Path = BASE_DIR / os.getenv("STORAGE_OUTPUTS", "storage/outputs")
+    MAX_FILE_SIZE_MB: int = int(os.getenv("MAX_FILE_SIZE_MB", "50"))
+    FILE_TTL_HOURS: int = int(os.getenv("FILE_TTL_HOURS", "24"))
+
+    def ensure_dirs(self) -> None:
+        self.STORAGE_UPLOADS.mkdir(parents=True, exist_ok=True)
+        self.STORAGE_OUTPUTS.mkdir(parents=True, exist_ok=True)
 
 
-app = FastAPI(
-    title="Book Translator",
-    description="Перевод книг с сохранением вёрстки",
-    version="0.1.0",
-    lifespan=lifespan,
-)
-
-# Подключаем роутеры
-app.include_router(preview_router)
-app.include_router(feedback_router)
-
-# Подключаем статику (UI)
-app.mount("/ui", StaticFiles(directory="static", html=True), name="ui")
-
-from fastapi.responses import FileResponse
-
-@app.get("/offer")
-async def offer_page():
-    return FileResponse("static/offer.html")
-
-@app.get("/privacy")
-async def privacy_page():
-    return FileResponse("static/privacy.html")
-
-
-@app.get("/")
-async def root():
-    return {
-        "status": "ok",
-        "message": "Book Translator API работает",
-        "model": settings.GENAPI_MODEL,
-        "ui": "/ui/",
-        "docs": "/docs",
-    }
-
-
-@app.get("/health")
-async def health():
-    return JSONResponse({"status": "healthy"})
-
-
-@app.get("/translate-test")
-async def translate_test(
-    text: str = Query(...),
-    source: str = Query("en"),
-    target: str = Query("ru"),
-):
-    try:
-        result = translate_text(text, source_lang=source, target_lang=target)
-        return {"status": "ok", "original": text, "translation": result}
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
-
-
-@app.post("/parse-test")
-async def parse_test(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(".epub"):
-        return JSONResponse(status_code=400, content={"status": "error", "message": "Только .epub"})
-
-    upload_path = settings.STORAGE_UPLOADS / file.filename
-    with open(upload_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-
-    try:
-        book = parse_epub(str(upload_path))
-        return {
-            "status": "ok",
-            "title": book.title,
-            "author": book.author,
-            "language": book.language,
-            "total_segments": len(book.segments),
-        }
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
-    )
+settings = Settings()
+settings.ensure_dirs()
