@@ -1,9 +1,11 @@
 """Эндпоинты превью и полного перевода книги."""
 import asyncio
 import shutil
+import uuid
+from pathlib import Path
 from datetime import datetime
 
-from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, Request, Body
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 
 from config import settings
@@ -21,6 +23,45 @@ BATCH_SIZE = 5
 KEY_PREVIEW = 0
 KEY_FULL_BOOK = 1
 
+async def _require_paid(job: dict) -> tuple[bool, str, str]:
+    """
+    Проверяет оплату задачи.
+    Возвращает (ok, message, status):
+      - ok=True,  message="",    status="succeeded" — оплачено, можно работать
+      - ok=False, message="...", status="pending"   — обрабатывается, ждём
+      - ok=False, message="...", status="canceled"|"refunded"|"error" — не пускаем
+    """
+    from app.payments.yookassa_client import client as yookassa_client
+
+    payment_id = job.get("payment_id") or ""
+    if not payment_id:
+        return False, "Требуется оплата", "no_payment"
+
+    try:
+        payment = yookassa_client.get_payment(payment_id)
+    except Exception:
+        return False, "Сервис оплаты временно недоступен. Попробуйте через минуту.", "error"
+
+    status = payment.get("status", "unknown")
+
+    # Проверяем, что платёж относится именно к этой задаче
+    metadata = payment.get("metadata") or {}
+    if metadata.get("job_id") != job["id"]:
+        return False, "Платёж не относится к этой задаче", "error"
+
+    if status == "succeeded":
+        return True, "", "succeeded"
+
+    if status in ("pending", "waiting_for_capture"):
+        return False, "Оплата обрабатывается, подождите пару минут и обновите страницу", "pending"
+
+    if status == "canceled":
+        return False, "Платёж отменён. Попробуйте оплатить заново.", "canceled"
+
+    if status == "refunded":
+        return False, "Платёж возвращён. Для доступа к переводу требуется новая оплата.", "refunded"
+
+    return False, f"Платёж в неизвестном статусе: {status}", "error"
 
 @router.post("/upload")
 async def preview_upload(file: UploadFile = File(...)):
@@ -30,14 +71,19 @@ async def preview_upload(file: UploadFile = File(...)):
             content={"status": "error", "message": "Только .epub"},
         )
 
-    upload_path = settings.STORAGE_UPLOADS / file.filename
+    # 🔒 БЕЗОПАСНОСТЬ: берем только имя файла (без путей), добавляем UUID для уникальности
+    original_name = Path(file.filename).name
+    safe_filename = f"{uuid.uuid4().hex[:8]}_{original_name}"
+
+    upload_path = settings.STORAGE_UPLOADS / safe_filename
     with open(upload_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
     try:
         book = parse_epub(str(upload_path))
-        job_id = await job_store.create(file.filename, book)
-
+        # Сохраняем в БД оригинальное имя (чтобы при скачивании файл назывался красиво)
+        job_id = await job_store.create(original_name, book)
+        
         preview_segments = [s for s in book.segments if len(s.text.strip()) > 3][:PREVIEW_SEGMENTS]
         total_segments = len(book.segments)
         estimated_minutes = max(1, total_segments // 40)
@@ -77,6 +123,26 @@ async def preview_translate(job_id: str = Form(...)):
             content={"status": "error", "message": "В книге нет текста для перевода"},
         )
 
+    # 🔒 ПРОВЕРКА: Если превью уже переводили — отдаем из базы, не тратя деньги на GenAPI
+    existing_preview = await job_store.get_translation(job_id, KEY_PREVIEW)
+    if existing_preview:
+        results = []
+        for seg in segments_to_translate:
+            if seg.id in existing_preview:
+                translated_html = restore_placeholders(existing_preview[seg.id], seg.mapping or {})
+                results.append({
+                    "id": seg.id,
+                    "original_html": seg.text,
+                    "translated_html": translated_html,
+                })
+        return {
+            "status": "ok",
+            "translated_count": len(existing_preview),
+            "results": results,
+            "cached": True  # Пометка, что это из кэша
+        }
+
+    # Если превью еще нет — переводим
     translations_map, errors = await _translate_segments(
         segments_to_translate, book.language
     )
@@ -203,6 +269,18 @@ async def preview_translate_full(
             content={"status": "error", "message": "job_id не найден"},
         )
 
+    # 🔒 Проверка оплаты — без неё нельзя запустить полный перевод
+    paid, err_msg, pay_status = await _require_paid(job)
+    if not paid:
+        return JSONResponse(
+            status_code=402,
+            content={
+                "status": "error",
+                "message": err_msg,
+                "payment_status": pay_status,
+            },
+        )
+    
     if job["status"] == "translating":
         return {
             "status": "ok",
@@ -280,8 +358,24 @@ async def preview_download(job_id: str = Form(...)):
             content={"status": "error", "message": "job_id не найден"},
         )
 
-    translations = await job_store.get_translation(job_id, KEY_FULL_BOOK)
-    if not translations:
+    # Сначала пытаемся получить полный перевод
+    full_translations = await job_store.get_translation(job_id, KEY_FULL_BOOK)
+
+    if full_translations:
+        # 🔒 Полный перевод — только после оплаты
+        paid, err_msg, pay_status = await _require_paid(job)
+        if not paid:
+            return JSONResponse(
+                status_code=402,
+                content={
+                    "status": "error",
+                    "message": err_msg,
+                    "payment_status": pay_status,
+                },
+            )
+        translations = full_translations
+    else:
+        # Превью — бесплатно, оплата не нужна
         translations = await job_store.get_translation(job_id, KEY_PREVIEW)
 
     if not translations:
@@ -383,12 +477,14 @@ async def verify_payment(job_id: str = Form(...)):
             content={"status": "error", "message": f"Ошибка ЮKassa: {e}"},
         )
 
-    paid = payment["status"] == "succeeded"
+    pay_status = payment.get("status", "unknown")
+    paid = pay_status == "succeeded"
 
     return {
         "status": "ok",
         "paid": paid,
-        "payment_status": payment["status"],
+        "payment_status": pay_status,
+        "processing": pay_status in ("pending", "waiting_for_capture"),
     }
 
 
@@ -452,6 +548,9 @@ async def job_page(job_id: str):
 
 async def _translate_segments(segments, source_lang: str):
     batch_input = [(seg.id, seg.text) for seg in segments]
+    # Создаем словарь для быстрого поиска mapping по id
+    mapping_by_id = {seg.id: (seg.mapping or {}) for seg in segments}
+    
     batches = [
         batch_input[i:i + BATCH_SIZE]
         for i in range(0, len(batch_input), BATCH_SIZE)
@@ -460,27 +559,52 @@ async def _translate_segments(segments, source_lang: str):
     translations_map = {}
     errors = []
 
+    from app.utils.validator import validate_translation # Импортируем валидатор
+
     for batch in batches:
         expected_ids = {seg_id for seg_id, _ in batch}
         try:
             result = translate_batch(
                 batch, source_lang=source_lang, target_lang="ru",
             )
-            translations_map.update(result)
-
-            missing_ids = expected_ids - set(result.keys())
-            for seg_id in missing_ids:
+            
+            # Проверяем КАЖДЫЙ переведенный сегмент
+            for seg_id, translated_text in result.items():
+                original_text = next((t for sid, t in batch if sid == seg_id), "")
+                mapping = mapping_by_id.get(seg_id, {})
+                
+                is_valid, val_errors = validate_translation(original_text, translated_text, mapping)
+                
+                if is_valid:
+                    translations_map[seg_id] = translated_text
+                else:
+                    # Если QA не прошел — логируем и будем переводить по одному
+                    print(f"[QA WARNING] Сегмент {seg_id} не прошел проверку: {val_errors}")
+                    # Нам нужно добавить его в список "пропущенных", чтобы перевести заново
+                    
+            # Ищем те, что потерялись или не прошли QA
+            missing_or_failed_ids = expected_ids - set(translations_map.keys())
+            
+            for seg_id in missing_or_failed_ids:
                 text = next((t for i, t in batch if i == seg_id), None)
                 if not text:
                     continue
                 try:
+                    # Переводим по одному куску (точнее, но дороже)
                     translated = translate_text(
                         text, source_lang=source_lang, target_lang="ru",
                     )
-                    translations_map[seg_id] = translated
+                    # Проверяем еще раз
+                    is_valid, val_errors = validate_translation(text, translated, mapping_by_id.get(seg_id, {}))
+                    if is_valid:
+                        translations_map[seg_id] = translated
+                    else:
+                        errors.append({"id": seg_id, "error": f"QA failed: {val_errors}"})
                 except Exception as e2:
                     errors.append({"id": seg_id, "error": str(e2)})
+                    
         except Exception:
+            # Если батч упал полностью — переводим по одному
             for seg_id, text in batch:
                 try:
                     translated = translate_text(
@@ -492,6 +616,29 @@ async def _translate_segments(segments, source_lang: str):
 
     return translations_map, errors
 
+@router.post("/webhook/yookassa")
+async def yookassa_webhook(background_tasks: BackgroundTasks, data: dict = Body(...)):
+    """
+    Вебхук от ЮKassa. Сюда приходят уведомления об оплате.
+    """
+    event = data.get("event")
+    
+    # Нас интересует только успешная оплата
+    if event == "payment.succeeded":
+        payment = data.get("object", {})
+        metadata = payment.get("metadata", {})
+        job_id = metadata.get("job_id")
+        
+        if job_id:
+            job = await job_store.get(job_id)
+            # Если задача есть и она еще не переведена — запускаем!
+            if job and job["status"] not in ("translating", "done"):
+                await job_store.update_status(job_id, "translating")
+                background_tasks.add_task(_translate_book_background, job_id)
+                print(f"[WEBHOOK] Оплата получена, запущен перевод для job_id={job_id}")
+
+    # ЮKassa требует всегда возвращать 200, иначе она будет спамить запросами
+    return {"status": "ok"}
 
 try:
     from app.utils.mailer import send_translation_ready
