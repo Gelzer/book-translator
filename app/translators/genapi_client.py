@@ -8,7 +8,7 @@ from app.translators.prompts import (
     build_user_prompt,
     build_batch_prompt,
     parse_batch_response,
-    GLOSSARY,
+    BASE_GLOSSARY,
 )
 
 
@@ -97,7 +97,7 @@ def translate_text(
     glossary: dict | None = None,
 ) -> str:
     if glossary is None:
-        glossary = GLOSSARY
+        glossary = BASE_GLOSSARY
     return client.translate(text, source_lang, target_lang, glossary=glossary)
 
 
@@ -108,5 +108,5 @@ def translate_batch(
     glossary: dict | None = None,
 ) -> dict:
     if glossary is None:
-        glossary = GLOSSARY
+        glossary = BASE_GLOSSARY
     return client.translate_batch(segments, source_lang, target_lang, glossary=glossary)
