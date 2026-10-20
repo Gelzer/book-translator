@@ -201,6 +201,9 @@ async def _translate_book_background(job_id: str) -> None:
 
             if settings.MOCK_TRANSLATION:
                 await asyncio.sleep(0.3)
+            else:
+                # 🛑 ПАУЗА: Чтобы не получить ошибку 429 Too Many Requests
+                await asyncio.sleep(1.5)
 
             try:
                 result = translate_batch(
@@ -220,22 +223,29 @@ async def _translate_book_background(job_id: str) -> None:
                             text, source_lang=book.language, target_lang="ru",
                         )
                         translations_map[seg_id] = translated
-                    except Exception:
-                        pass
-            except Exception:
+                    except Exception as e:
+                        print(f"[TRANSLATION ERROR] Сегмент {seg_id} упал: {e}")
+            except Exception as e:
+                print(f"[TRANSLATION ERROR] Батч упал: {e}")
                 for seg_id, text in batch_input:
                     try:
                         translated = translate_text(
                             text, source_lang=book.language, target_lang="ru",
                         )
                         translations_map[seg_id] = translated
-                    except Exception:
-                        pass
+                    except Exception as e2:
+                        print(f"[TRANSLATION ERROR] Одиночный сегмент {seg_id} упал: {e2}")
 
             await job_store.update_progress(job_id, min(i + BATCH_SIZE, total))
 
+        if not translations_map:
+            await job_store.update_status(job_id, "error", "GenAPI не вернул ни одного перевода. Проверьте логи.")
+            return
+
         await job_store.save_translation(job_id, KEY_FULL_BOOK, translations_map)
         await job_store.update_status(job_id, "done")
+        
+        # ... (блок с email оставляем как есть) ...
 
         try:
             job = await job_store.get(job_id)
