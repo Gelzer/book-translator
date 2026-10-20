@@ -83,7 +83,7 @@ class GenAPIClient:
         if settings.MOCK_TRANSLATION:
             return {seg_id: f"[ТЕСТ] {text[:120]}..." for seg_id, text in segments}
         user = build_batch_prompt(segments, source_lang, target_lang, glossary)
-        raw = self._chat(BATCH_SYSTEM_PROMPT, user, temperature, max_tokens=4000)
+        raw = self._chat(BATCH_SYSTEM_PROMPT, user, temperature, max_tokens=8000)
         return parse_batch_response(raw)
 
 
