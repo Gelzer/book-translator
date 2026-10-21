@@ -5,7 +5,7 @@ from typing import Tuple, Dict, List
 
 # Длинные теги — раньше, чтобы `sub` не съедался как `s`
 TAG_PATTERN = re.compile(
-    r"<(/?)(strong|em|sup|sub|span|i|b|u|s|a)\b([^>]*)>",
+    r"<(/?)(strong|em|sup|sub|span|i|b|u|s|a|br|hr)\b([^>]*)>",
     re.IGNORECASE,
 )
 
