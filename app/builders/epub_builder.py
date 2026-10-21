@@ -12,105 +12,12 @@ from app.placeholders.extractor import extract_placeholders
 from app.placeholders.restorer import restore_placeholders
 
 SKIP_FILES = {
-    "mimetype",
-    "META-INF/container.xml",
-    "content.opf",
-    "toc.ncx",
-    "toc.xhtml",
-    "nav.xhtml",
-}
-
-LEFTOVER_PLACEHOLDER = re.compile(r"⟦[^⟧]*⟧")
-
-def _is_content_html(filename: str) -> bool:
-    lower = filename.lower()
-    if not (lower.endswith(".xhtml") or lower.endswith(".html") or lower.endswith(".htm")):
-        return False
-    if filename in SKIP_FILES:
-        return False
-    if filename.startswith("META-INF/"):
-        return False
-    base = filename.rsplit("/", 1)[-1].lower()
-    if base in ("nav.xhtml", "toc.xhtml", "toc.ncx"):
-        return False
-    return True
-
-def build_translated_epub(
-    source_path: str,
-    output_path: str,
-    translations: dict,
-) -> Tuple[str, int]:
-    """Собирает EPUB. Меняет ТОЛЬКО содержимое блоков, вёрстку не трогает."""
-    src = Path(source_path)
-    out = Path(output_path)
-
-    if not src.exists():
-        raise FileNotFoundError(f"Не найден файл: {source_path}")
-
-    replaced_count = 0
-    files_to_write = []
-
-    with zipfile.ZipFile(src, "r") as zin:
-        for entry in zin.infolist():
-            filename = entry.filename
-            data = zin.read(filename)
-
-            if filename == "mimetype":
-                files_to_write.append((entry, data, zipfile.ZIP_STORED))
-                continue
-
-            if _is_content_html(filename):
-                try:
-                    html = data.decode("utf-8", errors="ignore")
-                    file_key = os.path.basename(filename).rsplit(".", 1)[0]
-
-                    modified_html, this_replaced = _process_html(
-                        html,
-                        file_key=file_key,
-                        translations=translations,
-                    )
-                    replaced_count += this_replaced["replaced"]
-                    files_to_write.append(
-                        (entry, modified_html.encode("utf-8"), zipfile.ZIP_DEFLATED)
-                    )
-                except Exception as e:
-                    print(f"Ошибка сборки {filename}: {e}")
-                    files_to_write.append((entry, data, zipfile.ZIP_DEFLATED))
-            else:
-                files_to_write.append((entry, data, zipfile.ZIP_DEFLATED))
-
-    # Записываем ВСЕ файлы один раз
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zout:
-        for entry, data, compress_type in files_to_write:
-            new_entry = zipfile.ZipInfo(entry.filename, date_time=entry.date_time)
-            new_entry.compress_type = compress_type
-            new_entry.external_attr = entry.external_attr
-            zout.writestr(new_entry, data)
-
-    return str(out), replaced_count
-
-"""Собирает EPUB с переводом, сохраняя вёрстку один-в-один."""
-import os
-import re
-import zipfile
-from pathlib import Path
-from typing import Tuple
-
-from bs4 import BeautifulSoup
-
-from app.parsers.epub_parser import BLOCK_TAGS
-from app.placeholders.extractor import extract_placeholders
-from app.placeholders.restorer import restore_placeholders
-
-
-SKIP_FILES = {
     "mimetype", "META-INF/container.xml", "content.opf", 
     "toc.ncx", "toc.xhtml", "nav.xhtml",
 }
 
 LEFTOVER_PLACEHOLDER = re.compile(r"⟦[^⟧]*⟧")
 
-
 def _is_content_html(filename: str) -> bool:
     lower = filename.lower()
     if not (lower.endswith(".xhtml") or lower.endswith(".html") or lower.endswith(".htm")):
@@ -123,7 +30,6 @@ def _is_content_html(filename: str) -> bool:
     if base in ("nav.xhtml", "toc.xhtml", "toc.ncx"):
         return False
     return True
-
 
 def build_translated_epub(
     source_path: str,
@@ -177,19 +83,17 @@ def build_translated_epub(
 
     return str(out), replaced_count
 
-
 def _process_html(html: str, file_key: str, translations: dict) -> Tuple[str, dict]:
     soup = BeautifulSoup(html, "lxml")
 
     # 🛠️ МЯГКАЯ ЧИСТКА: вырезаем ТОЛЬКО жесткую ширину и высоту из тегов.
-    # Мы НЕ трогаем классы (чтобы не ломать страницы) и НЕ трогаем таблицы структурно.
     for tag in soup.find_all(True):
         if tag.has_attr("width"):
             del tag["width"]
         if tag.has_attr("height"):
             del tag["height"]
 
-    # 🛠️ Вставляем МЯГКИЙ CSS (только чтобы слова не вылезали за экран)
+    # 🛠️ Вставляем МЯГКИЙ CSS
     css_text = """
         body, p, div, span, td {
             word-wrap: break-word !important;
