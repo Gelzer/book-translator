@@ -10,18 +10,11 @@ def validate_translation(
     translated_text: str,
     mapping: Dict[str, str]
 ) -> Tuple[bool, List[str]]:
-    """
-    Проверяет качество перевода.
-    Возвращает (is_valid, list_of_errors).
-    """
     errors = []
 
-    # 1. Проверка на пустой ответ
     if not translated_text or not translated_text.strip():
         return False, ["Модель вернула пустой перевод"]
 
-    # 2. Проверка на "галлюцинации" по длине (перевод не должен быть в 4 раза короче или в 4 раза длиннее)
-    # Русский текст обычно на 10-20% длиннее английского, но не в 4 раза.
     len_orig = max(len(original_text.strip()), 1)
     len_trans = len(translated_text.strip())
     ratio = len_trans / len_orig
@@ -30,11 +23,8 @@ def validate_translation(
     elif ratio > 4.0:
         errors.append(f"Подозрительно длинный перевод (ratio {ratio:.2f})")
 
-    # 3. Проверка плейсхолдеров
-    # Собираем все плейсхолдеры из оригинала (по mapping)
+    # Проверка плейсхолдеров
     expected = set(mapping.keys())
-    
-    # Собираем плейсхолдеры из перевода
     found_matches = PLACEHOLDER_RE.findall(translated_text)
     found = {f"⟦{m}⟧" for m in found_matches}
 
@@ -42,18 +32,22 @@ def validate_translation(
     extra = found - expected
 
     if missing:
-        # Ограничиваем вывод, чтобы не спамить лог
         sample = list(missing)[:3]
         errors.append(f"Потеряны плейсхолдеры: {', '.join(sample)}")
     if extra:
         sample = list(extra)[:3]
         errors.append(f"Добавлены лишние плейсхолдеры: {', '.join(sample)}")
 
-    # 4. Проверка парности (открыт/закрыт)
-    # Быстрая эвристика: если количество открывающих != количеству закрывающих
     open_count = sum(1 for p in found if not p.startswith("⟦/"))
     close_count = sum(1 for p in found if p.startswith("⟦/"))
     if open_count != close_count:
         errors.append(f"Нарушена парность тегов: открыто {open_count}, закрыто {close_count}")
+
+    # 🚨 5. Проверка на непереведенную латиницу (Английские слова в русском тексте)
+    # Ищем английские буквы (исключая возможные URL и имена собственные из глоссария)
+    latin_chars = re.findall(r'[a-zA-Z]', translated_text)
+    # Если осталось больше 10 английских букв — это явный косяк перевода
+    if len(latin_chars) > 10:
+        errors.append(f"В переводе осталось слишком много английских букв (возможно, кусок текста не переведен)")
 
     return len(errors) == 0, errors
