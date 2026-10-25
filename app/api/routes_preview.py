@@ -1,5 +1,6 @@
 """Эндпоинты превью и полного перевода книги."""
 import asyncio
+import httpx
 import shutil
 import uuid
 from pathlib import Path
@@ -359,6 +360,49 @@ async def preview_set_email(
     return {"status": "ok", "message": "Email сохранён"}
 
 
+@router.post("/set-receipt-email")
+async def preview_set_receipt_email(
+    job_id: str = Form(...),
+    email: str = Form(...),
+):
+    job = await job_store.get(job_id)
+    if not job:
+        return JSONResponse(status_code=404, content={"status": "error", "message": "job_id не найден"})
+
+    email = email.strip()[:200]
+    if "@" not in email or "." not in email:
+        return JSONResponse(status_code=400, content={"status": "error", "message": "Некорректный email"})
+
+    await job_store.set_receipt_email(job_id, email)
+
+    # 🚨 ОТПРАВЛЯЕМ УВЕДОМЛЕНИЕ БРАТУ В TELEGRAM
+    try:
+        bot_token = settings.TELEGRAM_BOT_TOKEN
+        chat_id = settings.TELEGRAM_CHAT_ID
+        if bot_token and chat_id:
+            book_title = job["book"].title or "Без названия"
+            text = (
+                f"🧾 **Новый запрос на чек!**\n\n"
+                f"📖 Книга: {book_title}\n"
+                f"📧 Почта клиента: `{email}`\n"
+                f"🆔 ID задачи: `{job_id}`\n\n"
+                f"Не забудьте сформировать чек в 'Мой налог' и отправить его на этот адрес!"
+            )
+            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            
+            # Отправляем асинхронно, чтобы не задерживать ответ клиенту
+            async with httpx.AsyncClient() as client:
+                await client.post(url, json={
+                    "chat_id": chat_id,
+                    "text": text,
+                    "parse_mode": "Markdown"
+                }, timeout=10.0)
+    except Exception as e:
+        print(f"Ошибка при отправке уведомления в Telegram: {e}")
+
+    return {"status": "ok", "message": "Email для чека сохранён"}
+
+
 @router.post("/download")
 async def preview_download(job_id: str = Form(...)):
     job = await job_store.get(job_id)
@@ -518,16 +562,56 @@ async def job_page(job_id: str):
     total = job["total_segments"]
 
     if status == "done":
+        # Проверяем, сохранена ли уже почта для чека
+        receipt_email = job.get("receipt_email", "")
+        
+        if not receipt_email:
+            receipt_form = f"""
+            <div style="margin-top: 30px; padding: 20px; background: #fafaf7; border: 1px solid #e5e7eb; border-radius: 12px; text-align: left;">
+                <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 16px;">🧾 Получить официальный чек</h3>
+                <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">Пожалуйста, укажите email для получения чека (требование законодательства РФ). Мы отправим его в течение 24 часов.</p>
+                <form onsubmit="event.preventDefault(); saveReceipt('{job_id}');" style="display: flex; gap: 10px;">
+                    <input type="email" id="receipt-email-input" placeholder="your@email.com" required style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                    <button type="submit" style="padding: 10px 20px; background: #7a1f4a; color: white; border: none; border-radius: 5px; cursor: pointer;">Отправить</button>
+                </form>
+                <p id="receipt-msg" style="font-size: 13px; color: #15803d; margin-top: 10px; display: none;">✅ Почта сохранена! Чек придет на указанный адрес.</p>
+            </div>
+            <script>
+                async function saveReceipt(jobId) {{
+                    const email = document.getElementById('receipt-email-input').value;
+                    const fd = new FormData();
+                    fd.append('job_id', jobId);
+                    fd.append('email', email);
+                    const res = await fetch('/preview/set-receipt-email', {{ method: 'POST', body: fd }});
+                    if (res.ok) {{
+                        document.getElementById('receipt-email-input').disabled = true;
+                        document.querySelector('#receipt-email-input + button').disabled = true;
+                        document.getElementById('receipt-msg').style.display = 'block';
+                    }} else {{
+                        alert('Ошибка при сохранении.');
+                    }}
+                }}
+            </script>
+            """
+        else:
+            receipt_form = f"""
+            <div style="margin-top: 30px; padding: 20px; background: #fafaf7; border: 1px solid #e5e7eb; border-radius: 12px;">
+                <h3 style="margin-top: 0; font-size: 16px;">🧾 Чек об оплате</h3>
+                <p style="font-size: 14px; color: #15803d;">✅ Чек будет отправлен на почту: <strong>{receipt_email}</strong></p>
+            </div>
+            """
+
         body = f"""
         <h1 style="color:#15803d;">✅ Перевод готов</h1>
         <p><strong>{job['book'].title}</strong></p>
         <p>{job['book'].author}</p>
         <form method="post" action="/preview/download" style="margin-top:30px;">
             <input type="hidden" name="job_id" value="{job_id}">
-            <button type="submit" style="padding:14px 28px;background:#15803d;color:white;border:none;border-radius:10px;font-size:15px;cursor:pointer;">
+            <button type="submit" style="padding:14px 28px;background:#15803d;color:white;border:none;border-radius:10px;font-size:15px;cursor:pointer; width: 100%;">
                 ⬇ Скачать EPUB
             </button>
         </form>
+        {receipt_form}
         """
     elif status == "error":
         body = f"""
