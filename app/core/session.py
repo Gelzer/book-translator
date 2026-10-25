@@ -75,14 +75,22 @@ class JobStore:
                     progress INTEGER NOT NULL DEFAULT 0,
                     total_segments INTEGER NOT NULL DEFAULT 0,
                     email TEXT NOT NULL DEFAULT '',
+                    payment_id TEXT NOT NULL DEFAULT '',
+                    receipt_email TEXT NOT NULL DEFAULT '',
                     error TEXT NOT NULL DEFAULT ''
                 )
             """)
-            # Добавляем колонку payment_id, если её ещё нет
+            
+            # 🛡️ Добавляем колонки, если их нет (для старых баз)
             try:
                 await db.execute("ALTER TABLE jobs ADD COLUMN payment_id TEXT NOT NULL DEFAULT ''")
             except Exception:
-                pass  # колонка уже существует
+                pass
+            
+            try:
+                await db.execute("ALTER TABLE jobs ADD COLUMN receipt_email TEXT NOT NULL DEFAULT ''")
+            except Exception:
+                pass
 
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS translations (
@@ -121,6 +129,9 @@ class JobStore:
         if row is None:
             return None
 
+        # 🛡️ Безопасное чтение (защита от старых баз)
+        keys = row.keys()
+        
         return {
             "id": row["id"],
             "filename": row["filename"],
@@ -131,7 +142,8 @@ class JobStore:
             "total_segments": row["total_segments"],
             "email": row["email"],
             "error": row["error"],
-            "payment_id": row["payment_id"],
+            "payment_id": row["payment_id"] if "payment_id" in keys else "",
+            "receipt_email": row["receipt_email"] if "receipt_email" in keys else "",
         }
 
     async def update_status(self, job_id: str, status: str, error: str = "") -> None:
@@ -157,6 +169,15 @@ class JobStore:
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 "UPDATE jobs SET email = ? WHERE id = ?",
+                (email, job_id),
+            )
+            await db.commit()
+
+    async def set_receipt_email(self, job_id: str, email: str) -> None:
+        """Сохраняет email для отправки чека."""
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                "UPDATE jobs SET receipt_email = ? WHERE id = ?",
                 (email, job_id),
             )
             await db.commit()
