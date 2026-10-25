@@ -427,7 +427,18 @@
             <h3>Перевод готов!</h3>
             <p>Книга переведена и сохранена. Можно скачать.</p>
             <button class="btn btn-green" id="download-full-btn" type="button" style="padding: 14px 32px; font-size: 15px;">⬇ Скачать EPUB</button>
-        </div>
+            
+            <!-- 🧾 БЛОК ДЛЯ ЧЕКА -->
+            <div style="margin-top: 30px; padding: 20px; background: #fafaf7; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 450px; margin-left: auto; margin-right: auto; text-align: left;">
+                <h4 style="margin-top: 0; margin-bottom: 6px; font-size: 16px; color: #1a1a1a;">🧾 Получить официальный чек</h4>
+                <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">Пожалуйста, укажите email для получения чека об оплате (требование законодательства РФ). Мы отправим его в течение 24 часов.</p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="email" id="receipt-email-input" placeholder="your@email.com" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                    <button class="btn" onclick="saveReceiptEmail()" style="padding: 10px 16px; font-size: 14px; white-space: nowrap;">Отправить</button>
+                </div>
+                <p id="receipt-success-msg" style="font-size: 13px; color: #15803d; margin-top: 10px; display: none;">✅ Почта сохранена! Чек придет на указанный адрес.</p>
+            </div>
+        </div> <!-- ✅ ВОТ ЭТОТ ЗАКРЫВАЮЩИЙ ТЕГ БЫЛ ПРОПУЩЕН -->
 
         <div style="margin-top: 20px; text-align: center;">
             <button class="btn btn-sm btn-outline" id="progress-back-btn" type="button">← Вернуться к книге</button>
@@ -532,6 +543,36 @@
         </p>
     </div>
 </footer>
+
+    // 🧾 Функция для сохранения почты (чека)
+    async function saveReceiptEmail() {
+        const emailInput = document.getElementById('receipt-email-input');
+        const email = emailInput.value.trim();
+        
+        if (!email || !email.includes('@')) {
+            alert('Пожалуйста, введите корректный email');
+            return;
+        }
+
+        const fd = new FormData();
+        fd.append('job_id', currentJobId);
+        fd.append('email', email);
+
+        try {
+            const res = await fetch('/preview/set-receipt-email', { method: 'POST', body: fd });
+            if (res.ok) {
+                document.getElementById('receipt-success-msg').style.display = 'block';
+                emailInput.disabled = true;
+                const btn = document.querySelector('#receipt-email-input + button');
+                btn.textContent = 'Сохранено';
+                btn.disabled = true;
+            } else {
+                alert('Ошибка при сохранении. Попробуйте еще раз.');
+            }
+        } catch (e) {
+            alert('Ошибка сети: ' + e.message);
+        }
+    }
 
 <script>
     const dropZone = document.getElementById('drop-zone');
