@@ -4,6 +4,8 @@ from typing import Dict, List, Tuple
 
 # Ищем плейсхолдеры вида ⟦EM1⟧ или ⟦/EM1⟧
 PLACEHOLDER_RE = re.compile(r"⟦\s*(/?[A-ZА-ЯЁ]+\d+)\s*⟧")
+# Ищем английские слова (от 3 букв), чтобы отлавливать даже короткие типа "the", "and", "behold"
+LATIN_WORD_RE = re.compile(r"\b[a-zA-Z]{3,}\b")
 
 def validate_translation(
     original_text: str,
@@ -43,11 +45,16 @@ def validate_translation(
     if open_count != close_count:
         errors.append(f"Нарушена парность тегов: открыто {open_count}, закрыто {close_count}")
 
-    # 🚨 5. Проверка на непереведенную латиницу (Английские слова в русском тексте)
-    # Ищем английские буквы (исключая возможные URL и имена собственные из глоссария)
-    latin_chars = re.findall(r'[a-zA-Z]', translated_text)
-    # Если осталось больше 10 английских букв — это явный косяк перевода
-    if len(latin_chars) > 10:
-        errors.append(f"В переводе осталось слишком много английских букв (возможно, кусок текста не переведен)")
+    # 🚨 5. Проверка на непереведенные английские слова
+    # Убираем ссылки из текста, чтобы они не считались ошибкой
+    text_without_urls = re.sub(r'(https?://|www\.)\S+', '', translated_text)
+    
+    # Находим все английские слова длиной от 3 символов
+    latin_words = LATIN_WORD_RE.findall(text_without_urls)
+    
+    if latin_words:
+        # Берем первые 3 слова для лога, чтобы не спамить
+        sample_words = list(set(latin_words))[:3]
+        errors.append(f"В переводе остались английские слова: {', '.join(sample_words)}")
 
     return len(errors) == 0, errors
