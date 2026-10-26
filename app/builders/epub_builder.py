@@ -11,9 +11,11 @@ from app.parsers.epub_parser import BLOCK_TAGS
 from app.placeholders.extractor import extract_placeholders
 from app.placeholders.restorer import restore_placeholders
 
+# 🚫 Пропускаем ТОЛЬКО системную навигацию. 
+# toc.xhtml больше не в списке, чтобы он собирался с переводом!
 SKIP_FILES = {
     "mimetype", "META-INF/container.xml", "content.opf", 
-    "toc.ncx", "toc.xhtml", "nav.xhtml",
+    "toc.ncx", "nav.xhtml",
 }
 
 LEFTOVER_PLACEHOLDER = re.compile(r"⟦[^⟧]*⟧")
@@ -27,7 +29,8 @@ def _is_content_html(filename: str) -> bool:
     if filename.startswith("META-INF/"):
         return False
     base = filename.rsplit("/", 1)[-1].lower()
-    if base in ("nav.xhtml", "toc.xhtml", "toc.ncx"):
+    # 🚫 Убрали "toc.xhtml" отсюда
+    if base in ("nav.xhtml", "toc.ncx"):
         return False
     return True
 
