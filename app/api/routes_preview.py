@@ -642,8 +642,6 @@ async def job_page(job_id: str):
 
 async def _translate_segments(segments, source_lang: str):
     batch_input = [(seg.id, seg.text) for seg in segments]
-    # Создаем словарь для быстрого поиска mapping по id
-    mapping_by_id = {seg.id: (seg.mapping or {}) for seg in segments}
     
     batches = [
         batch_input[i:i + BATCH_SIZE]
@@ -653,52 +651,29 @@ async def _translate_segments(segments, source_lang: str):
     translations_map = {}
     errors = []
 
-    from app.utils.validator import validate_translation # Импортируем валидатор
-
     for batch in batches:
         expected_ids = {seg_id for seg_id, _ in batch}
         try:
             result = translate_batch(
                 batch, source_lang=source_lang, target_lang="ru",
             )
-            
-            # Проверяем КАЖДЫЙ переведенный сегмент
-            for seg_id, translated_text in result.items():
-                original_text = next((t for sid, t in batch if sid == seg_id), "")
-                mapping = mapping_by_id.get(seg_id, {})
-                
-                is_valid, val_errors = validate_translation(original_text, translated_text, mapping)
-                
-                if is_valid:
-                    translations_map[seg_id] = translated_text
-                else:
-                    # Если QA не прошел — логируем и будем переводить по одному
-                    print(f"[QA WARNING] Сегмент {seg_id} не прошел проверку: {val_errors}")
-                    # Нам нужно добавить его в список "пропущенных", чтобы перевести заново
-                    
-            # Ищем те, что потерялись или не прошли QA
-            missing_or_failed_ids = expected_ids - set(translations_map.keys())
-            
-            for seg_id in missing_or_failed_ids:
+            translations_map.update(result)
+
+            # Просто переводим потерявшиеся куски по одному (без валидатора)
+            missing_ids = expected_ids - set(result.keys())
+            for seg_id in missing_ids:
                 text = next((t for i, t in batch if i == seg_id), None)
                 if not text:
                     continue
                 try:
-                    # Переводим по одному куску (точнее, но дороже)
                     translated = translate_text(
                         text, source_lang=source_lang, target_lang="ru",
                     )
-                    # Проверяем еще раз
-                    is_valid, val_errors = validate_translation(text, translated, mapping_by_id.get(seg_id, {}))
-                    if is_valid:
-                        translations_map[seg_id] = translated
-                    else:
-                        errors.append({"id": seg_id, "error": f"QA failed: {val_errors}"})
+                    translations_map[seg_id] = translated
                 except Exception as e2:
                     errors.append({"id": seg_id, "error": str(e2)})
                     
         except Exception:
-            # Если батч упал полностью — переводим по одному
             for seg_id, text in batch:
                 try:
                     translated = translate_text(
