@@ -18,7 +18,7 @@ from app.core.session import job_store
 
 router = APIRouter(prefix="/preview", tags=["preview"])
 
-PREVIEW_SEGMENTS = 40
+PREVIEW_SEGMENTS = 20
 BATCH_SIZE = 5
 
 KEY_PREVIEW = 0
