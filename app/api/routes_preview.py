@@ -18,6 +18,7 @@ from app.core.session import job_store
 
 router = APIRouter(prefix="/preview", tags=["preview"])
 
+# ✅ ИЗМЕНЕНО: Теперь превью переводит 20 абзацев вместо 40
 PREVIEW_SEGMENTS = 20
 BATCH_SIZE = 5
 
@@ -246,8 +247,6 @@ async def _translate_book_background(job_id: str) -> None:
         await job_store.save_translation(job_id, KEY_FULL_BOOK, translations_map)
         await job_store.update_status(job_id, "done")
         
-        # ... (блок с email оставляем как есть) ...
-
         try:
             job = await job_store.get(job_id)
             if job and job.get("email"):
