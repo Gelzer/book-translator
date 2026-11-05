@@ -344,20 +344,45 @@
 
     <section class="card" id="step-upload">
         <div class="drop-zone" id="drop-zone">
-            <div class="drop-zone-icon">↑</div>
-            <div class="drop-zone-text">Перетащите EPUB сюда</div>
-            <div class="drop-zone-sub">или выберите файл на компьютере</div>
-            <button class="btn" id="select-btn" type="button">Выбрать файл</button>
-            <input type="file" id="file-input" accept=".epub" hidden>
+          <div class="drop-zone-icon">↑</div>
+          <div class="drop-zone-text">Перетащите EPUB сюда</div>
+          <div class="drop-zone-sub">или выберите файл на компьютере</div>
+          <button class="btn" id="select-btn" type="button">Выбрать файл</button>
+          <input type="file" id="file-input" accept=".epub" hidden>
         </div>
+        <div class="hidden" id="upload-loader" style="text-align:center;padding:32px 20px">
+          <div class="loader"></div> Читаю книгу…
+        </div>
+        <div class="hidden" id="upload-error"></div>
     </section>
 
     <section class="card hidden" id="step-book">
         <div class="info-bar" id="book-info"></div>
+        <div class="warning-box hidden" id="epub-warnings-box">
+    <div class="warn-title">⚠️ Книга собрана с ошибками</div>
+    <p class="warn-lead" id="epub-warnings-lead"></p>
+    <ul id="epub-warnings-list"
+        style="margin: 0; padding-left: 20px; font-size: 13px; color: #78350f; line-height: 1.6;">
+    </ul>
+    <p class="warn-lead" style="margin: 12px 0 0;">
+        Мы можем обработать книгу, но <strong>вёрстка и оформление в проблемных главах
+        могут отличаться от оригинала</strong> (шрифты, размеры картинок, отступы).
+        Если результат вас не устроит — попросите у продавца книги исходный EPUB из официального магазина.
+    </p>
+
+    <div class="action-grid" style="margin-top: 20px;">
+        <button class="btn btn-outline" id="cancel-epub-btn" type="button">
+            Выбрать другую книгу
+        </button>
+        <button class="btn" id="proceed-epub-btn" type="button">
+            Перевести всё равно
+        </button>
+    </div>
+</div>
         <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">
             Попробуйте качество перевода на первых абзацах бесплатно или закажите полный перевод книги.
         </p>
-        <div class="action-grid">
+        <div class="action-grid" id="book-actions">
             <button class="btn btn-outline" id="preview-btn" type="button">
                 Перевести 20 абзацев бесплатно
             </button>
@@ -595,32 +620,60 @@
     });
 
     async function handleFile(file) {
-        if (!file.name.toLowerCase().endsWith('.epub')) { alert('Пожалуйста, выберите файл EPUB'); return; }
-
-        stepUpload.innerHTML = '<div style="text-align:center;padding:20px"><div class="loader"></div> Читаю книгу…</div>';
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const resp = await fetch('/preview/upload', { method: 'POST', body: formData });
-            const data = await resp.json();
-
-            if (data.status !== 'ok') {
-                stepUpload.innerHTML = `<div class="error">Ошибка: ${escapeHtml(data.message)}</div>`;
-                return;
-            }
-
-            currentJobId = data.job_id;
-            currentTotalSegments = data.total_segments;
-            bookInfo.innerHTML = `<strong>${escapeHtml(data.title)}</strong> — ${escapeHtml(data.author)} · ${data.total_segments} фрагментов`;
-
-            stepUpload.classList.add('hidden');
-            stepBook.classList.remove('hidden');
-        } catch (e) {
-            stepUpload.innerHTML = `<div class="error">Ошибка сети: ${escapeHtml(e.message)}</div>`;
-        }
+    if (!file.name.toLowerCase().endsWith('.epub')) {
+        alert('Пожалуйста, выберите файл EPUB');
+        return;
     }
+
+    const dropZoneEl  = document.getElementById('drop-zone');
+    const loaderEl    = document.getElementById('upload-loader');
+    const errorEl     = document.getElementById('upload-error');
+
+    // Reset перед показом лоадера
+    errorEl.classList.add('hidden');
+    errorEl.innerHTML = '';
+    dropZoneEl.classList.add('hidden');
+    loaderEl.classList.remove('hidden');
+
+    // Сброс состояния предупреждений от предыдущей книги
+    warningsShown = false;
+    document.getElementById('epub-warnings-box').classList.add('hidden');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const resp = await fetch('/preview/upload', { method: 'POST', body: formData });
+        const data = await resp.json();
+
+        if (data.status !== 'ok') {
+            showUploadError('Ошибка: ' + escapeHtml(data.message));
+            return;
+        }
+
+        currentJobId = data.job_id;
+        currentTotalSegments = data.total_segments;
+        bookInfo.innerHTML = `<strong>${escapeHtml(data.title)}</strong> — ${escapeHtml(data.author)} · ${data.total_segments} фрагментов`;
+
+        // Показ/скрытие блока предупреждений + блокировка кнопок перевода
+        renderWarnings(data.warnings);
+
+        stepUpload.classList.add('hidden');
+        stepBook.classList.remove('hidden');
+    } catch (e) {
+        showUploadError('Ошибка сети: ' + escapeHtml(e.message));
+    }
+}
+
+function showUploadError(msg) {
+    document.getElementById('upload-loader').classList.add('hidden');
+    document.getElementById('drop-zone').classList.remove('hidden');
+
+    const errEl = document.getElementById('upload-error');
+    errEl.className = 'error';
+    errEl.innerHTML = msg;
+    errEl.classList.remove('hidden');
+}
 
     previewBtn.addEventListener('click', async () => {
         stepBook.classList.add('hidden');
