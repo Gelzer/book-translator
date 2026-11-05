@@ -11,6 +11,7 @@ BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6",
               "blockquote", "li", "div", "td", "th"]
 
 _NAMED_ENTITY_RE = re.compile(r"&([a-zA-Z][a-zA-Z0-9]+);")
+_UNESCAPED_AMP_RE = re.compile(r"&(?![a-zA-Z0-9#]+;)")
 
 
 def _entity_to_char(name: str) -> Optional[str]:
@@ -23,26 +24,28 @@ def _entity_to_char(name: str) -> Optional[str]:
     return value if len(value) == 1 else None
 
 
-def _replace_named_entities(html: str) -> str:
-    """&nbsp; → &#160;, чтобы строгий XML-парсер прожевал."""
+def _clean_entities(html: str) -> str:
+    """Заменяет HTML-сущности (&nbsp;) и одиночные & на валидный XML."""
     def repl(m):
         ch = _entity_to_char(m.group(1))
         return f"&#{ord(ch)};" if ch else m.group(0)
-    return _NAMED_ENTITY_RE.sub(repl, html)
+    
+    # 1. Меняем именованные сущности
+    html = _NAMED_ENTITY_RE.sub(repl, html)
+    # 2. Чиним неэкранированные амперсанды (например, AT&T), которые ломают XML
+    html = _UNESCAPED_AMP_RE.sub("&amp;", html)
+    return html
 
 
-def _check_xml(html: str) -> Optional[str]:
-    """None если XML валиден (или ошибка только про named entities), иначе текст ошибки."""
+def _check_xml(cleaned_html: str) -> Optional[str]:
+    """Возвращает None если XML валиден, иначе текст ошибки."""
     try:
         parser = etree.XMLParser(load_dtd=False, no_network=True,
                                  resolve_entities=False, huge_tree=True)
-        etree.fromstring(html.encode("utf-8"), parser=parser)
+        etree.fromstring(cleaned_html.encode("utf-8"), parser=parser)
         return None
     except etree.XMLSyntaxError as e:
-        msg = str(e)
-        if "Entity" in msg and "not defined" in msg:
-            return None  # entities развернём сами — это не поломка
-        return msg
+        return str(e)
     except Exception as e:
         return str(e)
 
@@ -53,14 +56,15 @@ def parse_xhtml(html: str) -> Tuple[BeautifulSoup, Optional[str]]:
     error — текст для пользователя, если файл реально сломан.
     При ошибке всё равно возвращает soup (через HTML-фолбэк), чтобы книга обработалась.
     """
-    error = _check_xml(html)
+    # Сначала чистим сущности, чтобы они не мешали проверке XML
+    cleaned = _clean_entities(html)
+    error = _check_xml(cleaned)
 
     if error is None:
-        cleaned = _replace_named_entities(html)
         try:
             return BeautifulSoup(cleaned, "lxml-xml"), None
-        except Exception:
-            pass
+        except Exception as e:
+            error = str(e)
 
     return BeautifulSoup(html, "lxml"), error
 
