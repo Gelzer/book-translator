@@ -675,6 +675,61 @@ function showUploadError(msg) {
     errEl.classList.remove('hidden');
 }
 
+    // --- НАЧАЛО БЛОКА ПРЕДУПРЕЖДЕНИЙ ---
+    let warningsShown = false;
+
+    function renderWarnings(warnings) {
+        const box        = document.getElementById('epub-warnings-box');
+        const lead       = document.getElementById('epub-warnings-lead');
+        const list       = document.getElementById('epub-warnings-list');
+        const bookActions = document.getElementById('book-actions');
+
+        if (!warnings || warnings.length === 0) {
+            box.classList.add('hidden');
+            bookActions.classList.remove('hidden');
+            return;
+        }
+
+        if (warningsShown) return;
+        warningsShown = true;
+
+        lead.textContent = `Найдено ${warnings.length} проблемных файлов в исходном EPUB.`;
+        list.innerHTML = '';
+        warnings.slice(0, 10).forEach(w => {
+            const li = document.createElement('li');
+            li.textContent = `${w.file}: ${w.reason}`;
+            list.appendChild(li);
+        });
+        if (warnings.length > 10) {
+            const li = document.createElement('li');
+            li.textContent = `… и ещё ${warnings.length - 10}`;
+            list.appendChild(li);
+        }
+
+        box.classList.remove('hidden');
+        bookActions.classList.add('hidden');   // блокируем кнопки перевода
+    }
+
+    document.getElementById('proceed-epub-btn').addEventListener('click', () => {
+        document.getElementById('epub-warnings-box').classList.add('hidden');
+        document.getElementById('book-actions').classList.remove('hidden');
+    });
+
+    document.getElementById('cancel-epub-btn').addEventListener('click', () => {
+        // Возврат к выбору файла
+        stepBook.classList.add('hidden');
+        stepUpload.classList.remove('hidden');
+
+        document.getElementById('drop-zone').classList.remove('hidden');
+        document.getElementById('upload-loader').classList.add('hidden');
+        document.getElementById('upload-error').classList.add('hidden');
+        document.getElementById('upload-error').innerHTML = '';
+
+        fileInput.value = '';   // позволяем заново выбрать тот же файл
+        warningsShown = false;
+    });
+    // --- КОНЕЦ БЛОКА ПРЕДУПРЕЖДЕНИЙ ---
+    
     previewBtn.addEventListener('click', async () => {
         stepBook.classList.add('hidden');
         stepResult.classList.remove('hidden');
