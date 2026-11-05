@@ -99,6 +99,7 @@ async def preview_upload(file: UploadFile = File(...)):
             "total_segments": total_segments,
             "preview_count": len(preview_segments),
             "estimated_minutes": estimated_minutes,
+            "warnings": book.metadata.get("warnings", []),
         }
     except Exception as e:
         return JSONResponse(
