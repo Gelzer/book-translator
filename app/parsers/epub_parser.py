@@ -4,13 +4,10 @@ from typing import List
 
 import ebooklib
 from ebooklib import epub
-from bs4 import BeautifulSoup
 
 from app.parsers.base import BookParser, ParsedBook, TextSegment
+from app.parsers.xhtml import parse_xhtml, iter_block_tags
 from app.placeholders.extractor import extract_placeholders
-
-
-BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "li", "div", "td", "th"]
 
 
 class EpubParser(BookParser):
@@ -31,32 +28,28 @@ class EpubParser(BookParser):
         language = self._get_meta(book, "language") or "en"
 
         segments: List[TextSegment] = []
+        warnings: List[dict] = []
 
         for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
             chapter_name = item.get_name()
             file_key = Path(chapter_name).name.rsplit(".", 1)[0]
 
-            # 🚫 Пропускаем ТОЛЬКО системную навигацию. 
-            # Файл toc.xhtml (текстовое оглавление) оставляем для перевода!
             if Path(chapter_name).name.lower() in ("nav.xhtml", "toc.ncx"):
                 continue
 
             html = item.get_content().decode("utf-8", errors="ignore")
-            soup = BeautifulSoup(html, "lxml")
+            soup, error = parse_xhtml(html)
+
+            if error:
+                warnings.append({"file": chapter_name, "reason": error})
 
             order = 0
-
-            for block in soup.find_all(BLOCK_TAGS):
-                # Пропускаем контейнеры с вложенными блочными тегами
-                if block.find(BLOCK_TAGS):
-                    continue
-
+            for block in iter_block_tags(soup):
                 inner_html = block.decode_contents().strip()
                 if not inner_html:
                     continue
 
                 text_with_ph, mapping = extract_placeholders(inner_html)
-
                 if not text_with_ph.strip():
                     continue
 
@@ -77,6 +70,7 @@ class EpubParser(BookParser):
             metadata={
                 "file_path": str(book_path),
                 "total_segments": len(segments),
+                "warnings": warnings,   # ← новое поле
             },
         )
 
