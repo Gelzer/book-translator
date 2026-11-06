@@ -631,17 +631,14 @@
         const loaderEl    = document.getElementById('upload-loader');
         const errorEl     = document.getElementById('upload-error');
 
-        // Reset перед показом лоадера
         errorEl.classList.add('hidden');
         errorEl.innerHTML = '';
         dropZoneEl.classList.add('hidden');
         loaderEl.classList.remove('hidden');
 
-        // Сброс состояния предупреждений от предыдущей книги
         warningsShown = false;
         document.getElementById('epub-warnings-box').classList.add('hidden');
 
-        // Сбрасываем старую сессию, если грузим новую книгу
         localStorage.removeItem('bt_current_job');
         localStorage.removeItem('bt_book_info');
             
@@ -664,7 +661,6 @@
             localStorage.setItem('bt_current_job', currentJobId);
             localStorage.setItem('bt_book_info', bookInfo.innerHTML);
 
-            // Показ/скрытие блока предупреждений + блокировка кнопок перевода
             renderWarnings(data.warnings);
 
             stepUpload.classList.add('hidden');
@@ -684,7 +680,6 @@
         errEl.classList.remove('hidden');
     }
 
-    // --- НАЧАЛО БЛОКА ПРЕДУПРЕЖДЕНИЙ ---
     function renderWarnings(warnings) {
         const box        = document.getElementById('epub-warnings-box');
         const lead       = document.getElementById('epub-warnings-lead');
@@ -714,7 +709,7 @@
         }
 
         box.classList.remove('hidden');
-        bookActions.classList.add('hidden');   // блокируем кнопки перевода
+        bookActions.classList.add('hidden');
     }
 
     document.getElementById('proceed-epub-btn').addEventListener('click', () => {
@@ -723,7 +718,6 @@
     });
 
     document.getElementById('cancel-epub-btn').addEventListener('click', () => {
-        // Возврат к выбору файла
         stepBook.classList.add('hidden');
         stepUpload.classList.remove('hidden');
 
@@ -732,11 +726,10 @@
         document.getElementById('upload-error').classList.add('hidden');
         document.getElementById('upload-error').innerHTML = '';
 
-        fileInput.value = '';   // позволяем заново выбрать тот же файл
+        fileInput.value = '';
         warningsShown = false;
     });
-    // --- КОНЕЦ БЛОКА ПРЕДУПРЕЖДЕНИЙ ---
-    
+
     previewBtn.addEventListener('click', async () => {
         stepBook.classList.add('hidden');
         stepResult.classList.remove('hidden');
@@ -752,10 +745,8 @@
             const data = await resp.json();
 
             if (data.status === 'ok' && data.cached) {
-                // Если уже переведено, сразу загружаем
                 loadPreviewResult();
             } else if (data.status === 'processing') {
-                // Запускаем проверку статуса
                 startPreviewPolling();
             } else {
                 translation.innerHTML = `<div class="error">Ошибка: ${escapeHtml(data.message)}</div>`;
@@ -897,7 +888,6 @@
             progressFill.style.width = pct + '%';
             progressNum.textContent = `${done} / ${total} (${pct}%)`;
 
-            // Меняем текст в зависимости от фазы
             const phaseEl = document.querySelector('.progress-header span');
             if (phaseEl) {
                 if (data.job_status === 'translating') {
@@ -1134,7 +1124,6 @@
         if (!savedJob) return;
 
         try {
-            // Проверяем на сервере, жива ли еще эта задача
             const resp = await fetch(`/preview/status/${savedJob}`);
             const data = await resp.json();
             
@@ -1143,7 +1132,6 @@
                 currentTotalSegments = data.total;
                 
                 if (data.job_status === 'translating') {
-                    // Если перевод шел, показываем экран прогресса и запускаем пуллинг
                     stepUpload.classList.add('hidden');
                     stepBook.classList.add('hidden');
                     stepProgress.classList.remove('hidden');
@@ -1151,14 +1139,12 @@
                     jobLink.textContent = `${window.location.origin}/preview/job/${currentJobId}`;
                     startPolling();
                 } else if (data.job_status === 'done') {
-                    // Если перевод готов
                     stepUpload.classList.add('hidden');
                     stepBook.classList.add('hidden');
                     stepProgress.classList.remove('hidden');
                     progressActive.classList.add('hidden');
                     progressDone.classList.remove('hidden');
                 } else if (data.job_status === 'preview_translating') {
-                    // Если превью переводится, показываем экран превью
                     stepUpload.classList.add('hidden');
                     stepBook.classList.add('hidden');
                     stepResult.classList.remove('hidden');
@@ -1166,14 +1152,12 @@
                     translation.innerHTML = '<div class="loader"></div>';
                     startPreviewPolling();
                 } else {
-                    // Если задача просто создана (ждет перевода)
                     const savedInfo = localStorage.getItem('bt_book_info');
                     if (savedInfo) bookInfo.innerHTML = savedInfo;
                     stepUpload.classList.add('hidden');
                     stepBook.classList.remove('hidden');
                 }
             } else {
-                // Задача устарела или удалена
                 localStorage.removeItem('bt_current_job');
                 localStorage.removeItem('bt_book_info');
             }
@@ -1182,10 +1166,7 @@
         }
     }
 
-    // Вызываем восстановление при старте
     restoreSession();
-    // -----------------------------------------------------------
-
 </script>
 </body>
 </html>
