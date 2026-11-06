@@ -463,7 +463,7 @@
                 </div>
                 <p id="receipt-success-msg" style="font-size: 13px; color: #15803d; margin-top: 10px; display: none;">✅ Почта сохранена! Чек придет на указанный адрес.</p>
             </div>
-        </div> <!-- ✅ ВОТ ЭТОТ ЗАКРЫВАЮЩИЙ ТЕГ БЫЛ ПРОПУЩЕН -->
+        </div>
 
         <div style="margin-top: 20px; text-align: center;">
             <button class="btn btn-sm btn-outline" id="progress-back-btn" type="button">← Вернуться к книге</button>
@@ -598,6 +598,8 @@
     let currentJobId = null;
     let currentTotalSegments = 0;
     let pollTimer = null;
+    let previewPollTimer = null;
+    let warningsShown = false;
 
     function escapeHtml(str) {
         if (!str) return '';
@@ -620,71 +622,69 @@
     });
 
     async function handleFile(file) {
-    if (!file.name.toLowerCase().endsWith('.epub')) {
-        alert('Пожалуйста, выберите файл EPUB');
-        return;
-    }
-
-    const dropZoneEl  = document.getElementById('drop-zone');
-    const loaderEl    = document.getElementById('upload-loader');
-    const errorEl     = document.getElementById('upload-error');
-
-    // Reset перед показом лоадера
-    errorEl.classList.add('hidden');
-    errorEl.innerHTML = '';
-    dropZoneEl.classList.add('hidden');
-    loaderEl.classList.remove('hidden');
-
-    // Сброс состояния предупреждений от предыдущей книги
-    warningsShown = false;
-    document.getElementById('epub-warnings-box').classList.add('hidden');
-
-    // Сбрасываем старую сессию, если грузим новую книгу
-    localStorage.removeItem('bt_current_job');
-    localStorage.removeItem('bt_book_info');
-        
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-        const resp = await fetch('/preview/upload', { method: 'POST', body: formData });
-        const data = await resp.json();
-
-        if (data.status !== 'ok') {
-            showUploadError('Ошибка: ' + escapeHtml(data.message));
+        if (!file.name.toLowerCase().endsWith('.epub')) {
+            alert('Пожалуйста, выберите файл EPUB');
             return;
         }
 
-        currentJobId = data.job_id;
-        currentTotalSegments = data.total_segments;
-        bookInfo.innerHTML = `<strong>${escapeHtml(data.title)}</strong> — ${escapeHtml(data.author)} · ${data.total_segments} фрагментов`;
+        const dropZoneEl  = document.getElementById('drop-zone');
+        const loaderEl    = document.getElementById('upload-loader');
+        const errorEl     = document.getElementById('upload-error');
 
-        localStorage.setItem('bt_current_job', currentJobId);
-        localStorage.setItem('bt_book_info', bookInfo.innerHTML);
+        // Reset перед показом лоадера
+        errorEl.classList.add('hidden');
+        errorEl.innerHTML = '';
+        dropZoneEl.classList.add('hidden');
+        loaderEl.classList.remove('hidden');
 
-        // Показ/скрытие блока предупреждений + блокировка кнопок перевода
-        renderWarnings(data.warnings);
+        // Сброс состояния предупреждений от предыдущей книги
+        warningsShown = false;
+        document.getElementById('epub-warnings-box').classList.add('hidden');
 
-        stepUpload.classList.add('hidden');
-        stepBook.classList.remove('hidden');
-    } catch (e) {
-        showUploadError('Ошибка сети: ' + escapeHtml(e.message));
+        // Сбрасываем старую сессию, если грузим новую книгу
+        localStorage.removeItem('bt_current_job');
+        localStorage.removeItem('bt_book_info');
+            
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const resp = await fetch('/preview/upload', { method: 'POST', body: formData });
+            const data = await resp.json();
+
+            if (data.status !== 'ok') {
+                showUploadError('Ошибка: ' + escapeHtml(data.message));
+                return;
+            }
+
+            currentJobId = data.job_id;
+            currentTotalSegments = data.total_segments;
+            bookInfo.innerHTML = `<strong>${escapeHtml(data.title)}</strong> — ${escapeHtml(data.author)} · ${data.total_segments} фрагментов`;
+
+            localStorage.setItem('bt_current_job', currentJobId);
+            localStorage.setItem('bt_book_info', bookInfo.innerHTML);
+
+            // Показ/скрытие блока предупреждений + блокировка кнопок перевода
+            renderWarnings(data.warnings);
+
+            stepUpload.classList.add('hidden');
+            stepBook.classList.remove('hidden');
+        } catch (e) {
+            showUploadError('Ошибка сети: ' + escapeHtml(e.message));
+        }
     }
-}
 
-function showUploadError(msg) {
-    document.getElementById('upload-loader').classList.add('hidden');
-    document.getElementById('drop-zone').classList.remove('hidden');
+    function showUploadError(msg) {
+        document.getElementById('upload-loader').classList.add('hidden');
+        document.getElementById('drop-zone').classList.remove('hidden');
 
-    const errEl = document.getElementById('upload-error');
-    errEl.className = 'error';
-    errEl.innerHTML = msg;
-    errEl.classList.remove('hidden');
-}
+        const errEl = document.getElementById('upload-error');
+        errEl.className = 'error';
+        errEl.innerHTML = msg;
+        errEl.classList.remove('hidden');
+    }
 
     // --- НАЧАЛО БЛОКА ПРЕДУПРЕЖДЕНИЙ ---
-    let warningsShown = false;
-
     function renderWarnings(warnings) {
         const box        = document.getElementById('epub-warnings-box');
         const lead       = document.getElementById('epub-warnings-lead');
@@ -737,8 +737,6 @@ function showUploadError(msg) {
     });
     // --- КОНЕЦ БЛОКА ПРЕДУПРЕЖДЕНИЙ ---
     
-       let previewPollTimer = null;
-
     previewBtn.addEventListener('click', async () => {
         stepBook.classList.add('hidden');
         stepResult.classList.remove('hidden');
@@ -1100,36 +1098,7 @@ function showUploadError(msg) {
         }
     })();
 
-    // 🧾 Функция для сохранения почты (чека) - ТЕПЕРЬ ВНУТРИ СКРИПТА
-    async function saveReceiptEmail() {
-        const emailInput = document.getElementById('receipt-email-input');
-        const email = emailInput.value.trim();
-        
-        if (!email || !email.includes('@')) {
-            alert('Пожалуйста, введите корректный email');
-            return;
-        }
-
-        const fd = new FormData();
-        fd.append('job_id', currentJobId);
-        fd.append('email', email);
-
-        try {
-            const res = await fetch('/preview/set-receipt-email', { method: 'POST', body: fd });
-            if (res.ok) {
-                document.getElementById('receipt-success-msg').style.display = 'block';
-                emailInput.disabled = true;
-                const btn = document.querySelector('#receipt-email-input + button');
-                btn.textContent = 'Сохранено';
-                btn.disabled = true;
-            } else {
-                alert('Ошибка при сохранении. Попробуйте еще раз.');
-            }
-        } catch (e) {
-            alert('Ошибка сети: ' + e.message);
-        }
-    }
-    // 🧾 Функция для сохранения почты (чека) - ТЕПЕРЬ ВНУТРИ СКРИПТА
+    // 🧾 Функция для сохранения почты (чека)
     async function saveReceiptEmail() {
         const emailInput = document.getElementById('receipt-email-input');
         const email = emailInput.value.trim();
@@ -1188,6 +1157,14 @@ function showUploadError(msg) {
                     stepProgress.classList.remove('hidden');
                     progressActive.classList.add('hidden');
                     progressDone.classList.remove('hidden');
+                } else if (data.job_status === 'preview_translating') {
+                    // Если превью переводится, показываем экран превью
+                    stepUpload.classList.add('hidden');
+                    stepBook.classList.add('hidden');
+                    stepResult.classList.remove('hidden');
+                    original.innerHTML = '<div class="loader"></div>';
+                    translation.innerHTML = '<div class="loader"></div>';
+                    startPreviewPolling();
                 } else {
                     // Если задача просто создана (ждет перевода)
                     const savedInfo = localStorage.getItem('bt_book_info');
