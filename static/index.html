@@ -639,6 +639,10 @@
     warningsShown = false;
     document.getElementById('epub-warnings-box').classList.add('hidden');
 
+    // Сбрасываем старую сессию, если грузим новую книгу
+    localStorage.removeItem('bt_current_job');
+    localStorage.removeItem('bt_book_info');
+        
     const formData = new FormData();
     formData.append('file', file);
 
@@ -654,6 +658,9 @@
         currentJobId = data.job_id;
         currentTotalSegments = data.total_segments;
         bookInfo.innerHTML = `<strong>${escapeHtml(data.title)}</strong> — ${escapeHtml(data.author)} · ${data.total_segments} фрагментов`;
+
+        localStorage.setItem('bt_current_job', currentJobId);
+        localStorage.setItem('bt_book_info', bookInfo.innerHTML);
 
         // Показ/скрытие блока предупреждений + блокировка кнопок перевода
         renderWarnings(data.warnings);
@@ -1091,5 +1098,54 @@ function showUploadError(msg) {
         }
     }
 </script>
+        // --- ВОССТАНОВЛЕНИЕ СЕССИИ ПРИ ОБНОВЛЕНИИ СТРАНИЦЫ (F5) ---
+    async function restoreSession() {
+        const savedJob = localStorage.getItem('bt_current_job');
+        if (!savedJob) return;
+
+        try {
+            // Проверяем на сервере, жива ли еще эта задача
+            const resp = await fetch(`/preview/status/${savedJob}`);
+            const data = await resp.json();
+            
+            if (data.status === 'ok') {
+                currentJobId = savedJob;
+                currentTotalSegments = data.total;
+                
+                if (data.job_status === 'translating') {
+                    // Если перевод шел, показываем экран прогресса и запускаем пуллинг
+                    stepUpload.classList.add('hidden');
+                    stepBook.classList.add('hidden');
+                    stepProgress.classList.remove('hidden');
+                    progressActive.classList.remove('hidden');
+                    jobLink.textContent = `${window.location.origin}/preview/job/${currentJobId}`;
+                    startPolling();
+                } else if (data.job_status === 'done') {
+                    // Если перевод готов
+                    stepUpload.classList.add('hidden');
+                    stepBook.classList.add('hidden');
+                    stepProgress.classList.remove('hidden');
+                    progressActive.classList.add('hidden');
+                    progressDone.classList.remove('hidden');
+                } else {
+                    // Если задача просто создана (ждет перевода)
+                    const savedInfo = localStorage.getItem('bt_book_info');
+                    if (savedInfo) bookInfo.innerHTML = savedInfo;
+                    stepUpload.classList.add('hidden');
+                    stepBook.classList.remove('hidden');
+                }
+            } else {
+                // Задача устарела или удалена
+                localStorage.removeItem('bt_current_job');
+                localStorage.removeItem('bt_book_info');
+            }
+        } catch (e) {
+            console.log("Ошибка восстановления сессии", e);
+        }
+    }
+
+    // Вызываем восстановление при старте
+    restoreSession();
+    // -----------------------------------------------------------
 </body>
 </html>
