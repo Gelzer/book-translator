@@ -108,7 +108,6 @@ async def preview_upload(file: UploadFile = File(...)):
         )
 
 
-@router.post("/translate")
 async def _translate_preview_background(job_id: str) -> None:
     """Фоновый перевод для превью (20 абзацев)."""
     job = await job_store.get(job_id)
@@ -172,6 +171,7 @@ async def get_preview_result(job_id: str):
             })
 
     return {"status": "ok", "results": results}
+
 
 async def _translate_book_background(job_id: str) -> None:
     try:
