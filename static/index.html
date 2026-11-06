@@ -737,6 +737,8 @@ function showUploadError(msg) {
     });
     // --- КОНЕЦ БЛОКА ПРЕДУПРЕЖДЕНИЙ ---
     
+       let previewPollTimer = null;
+
     previewBtn.addEventListener('click', async () => {
         stepBook.classList.add('hidden');
         stepResult.classList.remove('hidden');
@@ -747,39 +749,58 @@ function showUploadError(msg) {
         const formData = new FormData();
         formData.append('job_id', currentJobId);
 
-                try {
+        try {
             const resp = await fetch('/preview/translate', { method: 'POST', body: formData });
-            
-            if (!resp.ok) {
-                // Если сервер вернул ошибку (не 200), не пытаемся читать JSON
-                const text = await resp.text();
-                console.error("Ошибка сервера:", text);
-                translation.innerHTML = `<div class="error">Ошибка сервера (${resp.status}). Сервер перегружен или не успел перевести. Попробуйте еще раз.</div>`;
-                original.innerHTML = '';
-                return;
-            }
-
             const data = await resp.json();
-            // ... дальше ваш код
 
+            if (data.status === 'ok' && data.cached) {
+                // Если уже переведено, сразу загружаем
+                loadPreviewResult();
+            } else if (data.status === 'processing') {
+                // Запускаем проверку статуса
+                startPreviewPolling();
+            } else {
+                translation.innerHTML = `<div class="error">Ошибка: ${escapeHtml(data.message)}</div>`;
+                original.innerHTML = '';
+            }
+        } catch (e) {
+            translation.innerHTML = `<div class="error">Ошибка сети: ${escapeHtml(e.message)}</div>`;
+        }
+    });
+
+    function startPreviewPolling() {
+        if (previewPollTimer) clearInterval(previewPollTimer);
+        previewPollTimer = setInterval(async () => {
+            try {
+                const resp = await fetch(`/preview/status/${currentJobId}`);
+                const data = await resp.json();
+                if (data.job_status === 'preview_done') {
+                    clearInterval(previewPollTimer);
+                    loadPreviewResult();
+                } else if (data.job_status === 'error') {
+                    clearInterval(previewPollTimer);
+                    translation.innerHTML = `<div class="error">Ошибка сервера: ${escapeHtml(data.error)}</div>`;
+                }
+            } catch (e) {}
+        }, 2000);
+    }
+
+    async function loadPreviewResult() {
+        try {
+            const resp = await fetch(`/preview/preview-result/${currentJobId}`);
+            const data = await resp.json();
+            
             if (data.status !== 'ok') {
                 translation.innerHTML = `<div class="error">Ошибка: ${escapeHtml(data.message)}</div>`;
                 original.innerHTML = '';
                 return;
             }
 
-            resultTitle.textContent = `Перевод первых ${data.translated_count} абзацев`;
+            resultTitle.textContent = `Перевод первых ${data.results.length} абзацев`;
             original.innerHTML = '';
             translation.innerHTML = '';
 
             data.results.forEach(r => {
-                if (r.error) {
-                    const err = document.createElement('div');
-                    err.className = 'error';
-                    err.textContent = r.error;
-                    translation.appendChild(err);
-                    return;
-                }
                 const origDiv = document.createElement('div');
                 origDiv.className = 'segment';
                 origDiv.innerHTML = r.original_html;
@@ -793,9 +814,9 @@ function showUploadError(msg) {
 
             downloadBtn.disabled = false;
         } catch (e) {
-            translation.innerHTML = `<div class="error">Ошибка сети: ${escapeHtml(e.message)}</div>`;
+            translation.innerHTML = `<div class="error">Ошибка загрузки результата</div>`;
         }
-    });
+    }
 
     downloadBtn.addEventListener('click', async () => {
         downloadBtn.disabled = true;
