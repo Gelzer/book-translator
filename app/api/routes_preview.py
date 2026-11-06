@@ -109,75 +109,69 @@ async def preview_upload(file: UploadFile = File(...)):
 
 
 @router.post("/translate")
-async def preview_translate(job_id: str = Form(...)):
+async def _translate_preview_background(job_id: str) -> None:
+    """Фоновый перевод для превью (20 абзацев)."""
     job = await job_store.get(job_id)
     if not job:
-        return JSONResponse(
-            status_code=404,
-            content={"status": "error", "message": "job_id не найден или истёк"},
-        )
-
+        return
+    
     book = job["book"]
-    segments_to_translate = [s for s in book.segments if len(s.text.strip()) > 3][:PREVIEW_SEGMENTS]
+    segments = [s for s in book.segments if len(s.text.strip()) > 3][:PREVIEW_SEGMENTS]
+    
+    await job_store.update_status(job_id, "preview_translating")
+    
+    # Используем нашу функцию перевода
+    translations_map, errors = await _translate_segments(segments, book.language)
+    
+    await job_store.save_translation(job_id, KEY_PREVIEW, translations_map)
+    await job_store.update_status(job_id, "preview_done")
 
-    if not segments_to_translate:
-        return JSONResponse(
-            status_code=400,
-            content={"status": "error", "message": "В книге нет текста для перевода"},
-        )
 
-    # 🔒 ПРОВЕРКА: Если превью уже переводили — отдаем из базы, не тратя деньги на GenAPI
+@router.post("/translate")
+async def preview_translate(
+    background_tasks: BackgroundTasks,
+    job_id: str = Form(...),
+):
+    job = await job_store.get(job_id)
+    if not job:
+        return JSONResponse(status_code=404, content={"status": "error", "message": "job_id не найден"})
+
+    # Проверяем кэш
     existing_preview = await job_store.get_translation(job_id, KEY_PREVIEW)
     if existing_preview:
-        results = []
-        for seg in segments_to_translate:
-            if seg.id in existing_preview:
-                translated_html = restore_placeholders(existing_preview[seg.id], seg.mapping or {})
-                results.append({
-                    "id": seg.id,
-                    "original_html": seg.text,
-                    "translated_html": translated_html,
-                })
-        return {
-            "status": "ok",
-            "translated_count": len(existing_preview),
-            "results": results,
-            "cached": True  # Пометка, что это из кэша
-        }
+        return {"status": "ok", "cached": True}
 
-    # Если превью еще нет — переводим
-    translations_map, errors = await _translate_segments(
-        segments_to_translate, book.language
-    )
+    # Запускаем перевод в фоне
+    await job_store.update_status(job_id, "preview_translating")
+    background_tasks.add_task(_translate_preview_background, job_id)
 
+    return {"status": "processing", "message": "Перевод запущен"}
+
+
+@router.get("/preview-result/{job_id}")
+async def get_preview_result(job_id: str):
+    """Отдает готовый результат превью."""
+    job = await job_store.get(job_id)
+    if not job:
+        return JSONResponse(status_code=404, content={"status": "error", "message": "job_id не найден"})
+
+    translations = await job_store.get_translation(job_id, KEY_PREVIEW)
+    if not translations:
+        return JSONResponse(status_code=400, content={"status": "error", "message": "Перевод еще не готов"})
+
+    segments_to_translate = [s for s in job["book"].segments if len(s.text.strip()) > 3][:PREVIEW_SEGMENTS]
+    
     results = []
-    translations_for_save = {}
-
     for seg in segments_to_translate:
-        if seg.id in translations_map:
-            translated = translations_map[seg.id]
-            translated_html = restore_placeholders(translated, seg.mapping or {})
+        if seg.id in translations:
+            translated_html = restore_placeholders(translations[seg.id], seg.mapping or {})
             results.append({
                 "id": seg.id,
                 "original_html": seg.text,
                 "translated_html": translated_html,
             })
-            translations_for_save[seg.id] = translated
-        else:
-            err_msg = next(
-                (e["error"] for e in errors if e["id"] == seg.id),
-                "не получен перевод от API",
-            )
-            results.append({"id": seg.id, "error": err_msg})
 
-    await job_store.save_translation(job_id, KEY_PREVIEW, translations_for_save)
-
-    return {
-        "status": "ok",
-        "translated_count": len(translations_for_save),
-        "results": results,
-    }
-
+    return {"status": "ok", "results": results}
 
 async def _translate_book_background(job_id: str) -> None:
     try:
