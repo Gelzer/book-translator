@@ -1172,6 +1172,27 @@
         }
     }
 
+        // Кнопка "Загрузить другую книгу"
+    document.getElementById('new-book-btn').addEventListener('click', () => {
+        // Скрываем карточку книги, показываем зону загрузки
+        stepBook.classList.add('hidden');
+        stepUpload.classList.remove('hidden');
+        
+        // Сбрасываем визуал зоны загрузки
+        document.getElementById('drop-zone').classList.remove('hidden');
+        document.getElementById('upload-loader').classList.add('hidden');
+        document.getElementById('upload-error').classList.add('hidden');
+        
+        // Очищаем память, чтобы сайт не вернул эту же книгу при обновлении
+        fileInput.value = '';
+        currentJobId = null;
+        localStorage.removeItem('bt_current_job');
+        localStorage.removeItem('bt_book_info');
+        
+        // Сбрасываем предупреждения (если были)
+        warningsShown = false;
+        document.getElementById('epub-warnings-box').classList.add('hidden');
+    });
     restoreSession();
 </script>
 </body>
