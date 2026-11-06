@@ -747,9 +747,20 @@ function showUploadError(msg) {
         const formData = new FormData();
         formData.append('job_id', currentJobId);
 
-        try {
+                try {
             const resp = await fetch('/preview/translate', { method: 'POST', body: formData });
+            
+            if (!resp.ok) {
+                // Если сервер вернул ошибку (не 200), не пытаемся читать JSON
+                const text = await resp.text();
+                console.error("Ошибка сервера:", text);
+                translation.innerHTML = `<div class="error">Ошибка сервера (${resp.status}). Сервер перегружен или не успел перевести. Попробуйте еще раз.</div>`;
+                original.innerHTML = '';
+                return;
+            }
+
             const data = await resp.json();
+            // ... дальше ваш код
 
             if (data.status !== 'ok') {
                 translation.innerHTML = `<div class="error">Ошибка: ${escapeHtml(data.message)}</div>`;
