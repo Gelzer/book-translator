@@ -1097,8 +1097,37 @@ function showUploadError(msg) {
             alert('Ошибка сети: ' + e.message);
         }
     }
-</script>
-        // --- ВОССТАНОВЛЕНИЕ СЕССИИ ПРИ ОБНОВЛЕНИИ СТРАНИЦЫ (F5) ---
+    // 🧾 Функция для сохранения почты (чека) - ТЕПЕРЬ ВНУТРИ СКРИПТА
+    async function saveReceiptEmail() {
+        const emailInput = document.getElementById('receipt-email-input');
+        const email = emailInput.value.trim();
+        
+        if (!email || !email.includes('@')) {
+            alert('Пожалуйста, введите корректный email');
+            return;
+        }
+
+        const fd = new FormData();
+        fd.append('job_id', currentJobId);
+        fd.append('email', email);
+
+        try {
+            const res = await fetch('/preview/set-receipt-email', { method: 'POST', body: fd });
+            if (res.ok) {
+                document.getElementById('receipt-success-msg').style.display = 'block';
+                emailInput.disabled = true;
+                const btn = document.querySelector('#receipt-email-input + button');
+                btn.textContent = 'Сохранено';
+                btn.disabled = true;
+            } else {
+                alert('Ошибка при сохранении. Попробуйте еще раз.');
+            }
+        } catch (e) {
+            alert('Ошибка сети: ' + e.message);
+        }
+    }
+
+    // --- ВОССТАНОВЛЕНИЕ СЕССИИ ПРИ ОБНОВЛЕНИИ СТРАНИЦЫ (F5) ---
     async function restoreSession() {
         const savedJob = localStorage.getItem('bt_current_job');
         if (!savedJob) return;
@@ -1147,5 +1176,7 @@ function showUploadError(msg) {
     // Вызываем восстановление при старте
     restoreSession();
     // -----------------------------------------------------------
+
+</script>
 </body>
 </html>
