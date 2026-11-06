@@ -39,6 +39,8 @@ class EpubParser(BookParser):
 
             html = item.get_content().decode("utf-8", errors="ignore")
             soup, error = parse_xhtml(html)
+            
+            print(f"DEBUG PARSE: {chapter_name} | Ошибка XML: {error}")
 
             if error:
                 warnings.append({"file": chapter_name, "reason": error})
