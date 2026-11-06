@@ -20,7 +20,7 @@ router = APIRouter(prefix="/preview", tags=["preview"])
 
 # ✅ ИЗМЕНЕНО: Теперь превью переводит 20 абзацев вместо 40
 PREVIEW_SEGMENTS = 20
-BATCH_SIZE = 5
+BATCH_SIZE = 2
 
 KEY_PREVIEW = 0
 KEY_FULL_BOOK = 1
