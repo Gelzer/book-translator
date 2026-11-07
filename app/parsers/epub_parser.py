@@ -30,7 +30,14 @@ class EpubParser(BookParser):
         segments: List[TextSegment] = []
         warnings: List[dict] = []
 
-        for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
+        # ✅ ИСПРАВЛЕНО: Итерируемся по spine (оглавлению), чтобы сохранить порядок глав
+        for idref, linear in book.spine:
+            item = book.get_item_with_id(idref)
+            
+            # Пропускаем элементы, которые не являются текстовыми документами (например, картинки)
+            if not item or item.get_type() != ebooklib.ITEM_DOCUMENT:
+                continue
+
             chapter_name = item.get_name()
             file_key = Path(chapter_name).name.rsplit(".", 1)[0]
 
@@ -72,7 +79,7 @@ class EpubParser(BookParser):
             metadata={
                 "file_path": str(book_path),
                 "total_segments": len(segments),
-                "warnings": warnings,   # ← новое поле
+                "warnings": warnings,
             },
         )
 
