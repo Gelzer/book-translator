@@ -14,9 +14,12 @@ class Settings:
     GENAPI_MODEL: str = os.getenv("GENAPI_MODEL", "gpt-4o-mini")
     MOCK_TRANSLATION: bool = os.getenv("MOCK_TRANSLATION", "false").lower() == "true"
 
-    # --- Telegram ---
-    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
+    # --- Почта (SMTP) ---
+    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.yandex.ru")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "465"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")  # Куда присылать чеки и отзывы
 
     # --- ЮKassa ---
     YOOKASSA_SHOP_ID: str = os.getenv("YOOKASSA_SHOP_ID", "")
@@ -24,15 +27,11 @@ class Settings:
     YOOKASSA_RETURN_URL: str = os.getenv("YOOKASSA_RETURN_URL", "http://localhost:8000/ui/")
     BOOK_PRICE_RUB: int = int(os.getenv("BOOK_PRICE_RUB", "500"))
 
-    # --- Email (Resend) ---
-    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
-    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "Book Translator <onboarding@resend.dev>")
-    PUBLIC_URL: str = os.getenv("PUBLIC_URL", "http://localhost:8000")
-
     # --- Сервер ---
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
+    PUBLIC_URL: str = os.getenv("PUBLIC_URL", "http://localhost:8000")
 
     # --- Файлы ---
     STORAGE_UPLOADS: Path = BASE_DIR / os.getenv("STORAGE_UPLOADS", "storage/uploads")
