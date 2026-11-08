@@ -369,30 +369,20 @@ async def preview_set_receipt_email(
 
     await job_store.set_receipt_email(job_id, email)
 
-    # 🚨 ОТПРАВЛЯЕМ УВЕДОМЛЕНИЕ БРАТУ В TELEGRAM
-    try:
-        bot_token = settings.TELEGRAM_BOT_TOKEN
-        chat_id = settings.TELEGRAM_CHAT_ID
-        if bot_token and chat_id:
-            book_title = job["book"].title or "Без названия"
-            text = (
-                f"🧾 **Новый запрос на чек!**\n\n"
-                f"📖 Книга: {book_title}\n"
-                f"📧 Почта клиента: `{email}`\n"
-                f"🆔 ID задачи: `{job_id}`\n\n"
-                f"Не забудьте сформировать чек в 'Мой налог' и отправить его на этот адрес!"
-            )
-            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-            
-            # Отправляем асинхронно, чтобы не задерживать ответ клиенту
-            async with httpx.AsyncClient() as client:
-                await client.post(url, json={
-                    "chat_id": chat_id,
-                    "text": text,
-                    "parse_mode": "Markdown"
-                }, timeout=10.0)
-    except Exception as e:
-        print(f"Ошибка при отправке уведомления в Telegram: {e}")
+    # 🚨 ОТПРАВЛЯЕМ УВЕДОМЛЕНИЕ НА ПОЧТУ
+    from app.utils.mailer import send_admin_notification
+
+    book_title = job["book"].title or "Без названия"
+    subject = "🧾 Запрос на чек"
+    body_text = (
+        f"Поступил запрос на чек об оплате.\n\n"
+        f"📖 Книга: {book_title}\n"
+        f"📧 Почта клиента: {email}\n"
+        f"🆔 ID задачи: {job_id}\n\n"
+        f"Не забудьте сформировать чек в 'Мой налог' и отправить его на этот адрес!"
+    )
+    
+    send_admin_notification(subject, body_text)
 
     return {"status": "ok", "message": "Email для чека сохранён"}
 
