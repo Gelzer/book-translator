@@ -4,11 +4,11 @@ from datetime import datetime
 from pathlib import Path
 from threading import Lock
 
-import httpx
 from fastapi import APIRouter, Form
 from fastapi.responses import JSONResponse
 
 from config import settings
+from app.utils.mailer import send_admin_notification
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
@@ -32,39 +32,6 @@ def _save_feedback(items: list) -> None:
         json.dump(items, f, ensure_ascii=False, indent=2)
 
 
-def _send_telegram(item: dict) -> None:
-    """Отправляет отзыв в Telegram. Тихо игнорирует ошибки."""
-    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
-        return
-
-    type_label = "⭐ Отзыв" if item["type"] == "review" else "💡 Предложение"
-    rating_str = ""
-    if item.get("rating"):
-        stars = "★" * item["rating"] + "☆" * (5 - item["rating"])
-        rating_str = f"\n{stars} ({item['rating']}/5)"
-
-    email_str = f"\n📧 {item['email']}" if item.get("email") else ""
-
-    text = (
-        f"{type_label}{rating_str}{email_str}\n"
-        f"🕐 {item['created_at']}\n\n"
-        f"{item['text']}"
-    )
-
-    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
-
-    try:
-        with httpx.Client(timeout=10.0) as client:
-            client.post(url, json={
-                "chat_id": settings.TELEGRAM_CHAT_ID,
-                "text": text,
-                "disable_web_page_preview": True,
-            })
-    except Exception:
-        # Не ломаем запрос пользователя, если телега недоступна
-        pass
-
-
 @router.post("/submit")
 async def submit_feedback(
     type: str = Form(...),
@@ -72,7 +39,7 @@ async def submit_feedback(
     rating: int = Form(0),
     email: str = Form(""),
 ):
-    """Сохраняет отзыв и отправляет в Telegram."""
+    """Сохраняет отзыв и отправляет на почту."""
     if type not in ("review", "suggestion"):
         return JSONResponse(
             status_code=400,
@@ -102,13 +69,27 @@ async def submit_feedback(
         "created_at": datetime.now().isoformat(timespec="seconds"),
     }
 
-    # 1) Сохраняем в файл (для локальной разработки)
+    # 1) Сохраняем в файл
     with _lock:
         items = _load_feedback()
         items.append(item)
         _save_feedback(items)
 
-    # 2) Отправляем в Telegram (работает везде, включая Render)
-    _send_telegram(item)
+    # 2) Отправляем на почту
+    type_label = "⭐ Отзыв" if item["type"] == "review" else "💡 Предложение"
+    rating_str = ""
+    if item.get("rating"):
+        stars = "★" * item["rating"] + "☆" * (5 - item["rating"])
+        rating_str = f"\n{stars} ({item['rating']}/5)"
+    email_str = f"\n📧 Почта клиента: {item['email']}" if item.get("email") else ""
+
+    subject = f"Новый {type_label.lower()} на сайте!"
+    body_text = (
+        f"{type_label}{rating_str}{email_str}\n"
+        f"🕐 Время: {item['created_at']}\n\n"
+        f"Текст:\n{item['text']}"
+    )
+    
+    send_admin_notification(subject, body_text)
 
     return {"status": "ok", "message": "Спасибо! Мы получили ваш отзыв."}
