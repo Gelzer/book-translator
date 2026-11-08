@@ -1,27 +1,39 @@
-"""Отправка email через Resend HTTP API (работает на Render)."""
-import httpx
-
+"""Отправка email через стандартный SMTP."""
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+from threading import Thread
 from config import settings
 
 
-RESEND_API_URL = "https://api.resend.com/emails"
+def _send_email_sync(to_email: str, subject: str, html_body: str) -> tuple[bool, str]:
+    """Синхронная отправка письма."""
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        return False, "SMTP_USER или SMTP_PASSWORD не заданы в .env"
+
+    msg = MIMEText(html_body, 'html', 'utf-8')
+    msg['Subject'] = Header(subject, 'utf-8')
+    msg['From'] = settings.SMTP_USER
+    msg['To'] = to_email
+
+    try:
+        if settings.SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10)
+        else:
+            server = smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10)
+            server.starttls()
+
+        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        server.sendmail(settings.SMTP_USER, [to_email], msg.as_string())
+        server.quit()
+        return True, ""
+    except Exception as e:
+        print(f"=== EMAIL ERROR ===\n{type(e).__name__}: {e}\n===================")
+        return False, str(e)
 
 
-def send_translation_ready(
-    to_email: str,
-    job_id: str,
-    book_title: str,
-) -> tuple[bool, str]:
-    """
-    Отправляет письмо «перевод готов» через Resend.
-    Возвращает (успех, текст_ошибки_или_пустая_строка).
-    """
-    if not settings.RESEND_API_KEY:
-        return False, "RESEND_API_KEY не задан в .env"
-
-    if not to_email or "@" not in to_email:
-        return False, f"Некорректный email: {to_email}"
-
+def send_translation_ready(to_email: str, job_id: str, book_title: str) -> tuple[bool, str]:
+    """Отправляет письмо клиенту о готовности перевода."""
     download_url = f"{settings.PUBLIC_URL.rstrip('/')}/preview/job/{job_id}"
     subject = f"Ваш перевод готов: {book_title}"
 
@@ -48,32 +60,30 @@ def send_translation_ready(
       </body>
     </html>
     """
+    return _send_email_sync(to_email, subject, html_body)
 
-    payload = {
-        "from": settings.EMAIL_FROM,
-        "to": [to_email],
-        "subject": subject,
-        "html": html_body,
-    }
 
-    headers = {
-        "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-        "Content-Type": "application/json",
-    }
+def send_admin_notification(subject: str, text: str) -> None:
+    """Отправляет уведомление (чек или отзыв) вам на почту в фоновом потоке."""
+    if not settings.ADMIN_EMAIL:
+        print("ADMIN_EMAIL не задан. Уведомление не отправлено.")
+        return
 
-    try:
-        with httpx.Client(timeout=15.0) as client:
-            resp = client.post(RESEND_API_URL, json=payload, headers=headers)
-            if resp.status_code >= 400:
-                err = f"HTTP {resp.status_code}: {resp.text[:300]}"
-                print(f"=== EMAIL ERROR ===")
-                print(err)
-                print("===================")
-                return False, err
-        return True, ""
-    except Exception as e:
-        err = f"{type(e).__name__}: {e}"
-        print(f"=== EMAIL EXCEPTION ===")
-        print(err)
-        print("=======================")
-        return False, err
+    # Оборачиваем текст в простой HTML для красоты
+    html_body = f"""
+    <html>
+      <body style="font-family: sans-serif; font-size: 15px; color: #333;">
+        <div style="padding: 20px; background: #f9f9f9; border-radius: 10px; border: 1px solid #ddd;">
+          {text.replace(chr(10), '<br>')}
+        </div>
+      </body>
+    </html>
+    """
+
+    def _task():
+        success, err = _send_email_sync(settings.ADMIN_EMAIL, subject, html_body)
+        if not success:
+            print(f"Не удалось отправить уведомление админу: {err}")
+
+    # Запускаем в фоне, чтобы не задерживать ответ сервера
+    Thread(target=_task).start()
